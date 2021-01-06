@@ -1,0 +1,1411 @@
+/*--------------------------------------------------------------------------
+' File:      diction.ssl                             Date: 03-19-97
+'
+' Function(s):
+'   Write_Dictionary    : Writes a Dictionary to a file.
+'   Get_Type            : Gets a human understandable type for an object
+'   GET_ALIDS           : Gets all Alarms data from equipment
+'   GET_CEIDS           : Gets all Collection Event data from equipment
+'   GET_DVIDS           : Gets all Data Variable data from equipment
+'   GET_ECIDS           : Gets all Equipment Constant data from equipment
+'   GET_PPLIB           : Gets all Process Program data from equipment
+'   GET_RPTIDS          : Gets all Report data from equipment
+'   GET_SVIDS           : Gets all Status Variable data from equipment
+'   Print_Dictionary    : Prints any field in all structs of a given Dict.
+'   Test_Compare_Dict   : Tests Comparing two Dictionaries
+'   Test_Read_Dictionary: Tests reading in Dictionaries
+'   Run_All_Scripts     : This will run all dictionary scripts
+'   Compare_DICT        : Compares 2 dictionaries
+'
+'
+'   
+'
+' Description:
+'   This file has some sample utilities for use with the dictionaries 
+'   capabilities of SECSIM Pro 2.0.
+'
+' Author(s):
+'   GW Associates Staff, (cjs)
+'
+' Cautions:
+'   Some of the scripts in this file use Smart_Decode and Smart_GetFormat
+'   found in utils2.ssl.  Some of the scripts in this file make assumptions
+'   about global variables that are declared in this file, specifically
+'   the names of the dictionaries!   
+'
+' Mods:
+'    Date     Who Description
+'    -------- --- -------------------------------------------------------
+'    03-19-97 GW  Creation
+'    03-26-97 cjs First phase of routines complete.  Requires a modified 
+'                 Smart_Decode (one that does not do a final decode if the
+'                 item is a SECS List with only one item in it) and 
+'                 Smart_GetFormat.  I am still not sure if this is such 
+'                 a good thing to have done to Smart_Decode.  More thought
+'                 is required.
+'    10-21-97 cjs Added code to process Empty values in Write_Dictionary.
+'--------------------------------------------------------------------------*/
+
+/*------------------------------------------------------------------------
+This is a typical way to express a STATUS or DATA VARIABLE on an equipment.
+   vid    is a number 
+   name   is a string 
+   value  type depends on format
+------------------------------------------------------------------------*/
+Structure VID_STRUCT ( vid, name, value );
+Global    SVIDS;
+Global    SVIDS2;
+Global    DVIDS;
+Global    DVIDS2;
+Global 	VIDS_DICT;
+
+Structure VID_STATE_STRUCT(id, name, states);
+Global	VID_STATE_DICT;
+
+/*------------------------------------------------------------------------
+This is a typical way to express a EQUIPMENT CONSTANTS (ECID) on an equipment.
+   format is a string 
+   vid    is a number   // it is important that this key field be "vid"
+   ecname is a string   //     The reason can be see in GET_DVIDS.
+   ecmin  is a number 
+   ecmax  is a number 
+   ecval  is a depends on format
+   ecdef  is a depends on format 
+   units  is a string 
+------------------------------------------------------------------------*/
+Structure ECID_STRUCT ( format, ecid, ecname, ecmin, ecmax, ecval, ecdef, units );
+Global    ECIDS;
+Global    ECIDS2;
+
+/*------------------------------------------------------------------------
+This is a typical way to express an ALARM on an equipment.
+   alid    is a number
+   alcd    is a number 
+   altx    is a string 
+   enabled is a number
+   state   is a number (alarm is on or off)
+   ceon    is a number (collection event when alarm goes on)
+   ceoff   is a number (collection event when alarm goes off)
+------------------------------------------------------------------------*/
+Structure ALID_STRUCT ( alid, alcd, altx, enabled, state, ceon, ceoff );
+Global    ALIDS;
+Global    ALIDS2;
+
+/*------------------------------------------------------------------------
+This is a typical way to express an CEID on an equipment.
+   ceid    is a number
+   name    is a string (assigned by the user later.)
+------------------------------------------------------------------------*/
+Structure CEID_STRUCT ( ceid, name );
+Global    CEIDS;
+Global    CEIDS2;
+Global 	CEIDS_DICT;
+
+/*------------------------------------------------------------------------
+This is a typical way to express an RPTID on an equipment.
+   rptid   is a number
+   vids    is an SSL list of vids
+   values  is an SSL list of values
+------------------------------------------------------------------------*/
+//Structure RPTID_STRUCT ( rptid, vids, values );
+//Global    RPTIDS;
+//Global    RPTIDS2;
+
+/*------------------------------------------------------------------------
+This is a typical way to express an RPTID on an equipment.
+   rptid	is a number
+   rptname	name of the report
+   vids		is an SSL list of vids
+   vidnames	is an name list of vids
+   values	is an value list of vids
+------------------------------------------------------------------------*/
+Structure RPTID_STRUCT ( rptid, rptname, vids, vidnames, values );
+Global    RPTIDS;
+Global    RPTIDS2;
+Global 	RPTIDS_DICT;
+
+/*------------------------------------------------------------------------
+This is a typical way to express an PPLIB on an equipment.
+   ppid    is a string
+   ppbody  is a SECS object
+------------------------------------------------------------------------*/
+Structure PPLIB_STRUCT ( ppid, ppbody );
+Global    PPLIB;
+Global    PPLIB2;
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//++++++++++++++ END OF DATA STRUCTURES, START OF FUNCTIONS ++++++++++++++
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+/*------------------------------------------------------------------------
+Run All Dictionary Scripts in a reasonable way...
+------------------------------------------------------------------------*/
+Run_All_Scripts()
+{
+
+
+    logn("Running Get_SVIDS ---------------------------!");
+    GET_SVIDS();
+    logn("Running GET_ECIDS ---------------------------!");
+    GET_ECIDS();
+    logn("Running GET_DVIDS ---------------------------!");
+    GET_DVIDS();
+    logn("Running GET_ALIDS ---------------------------!");
+    GET_ALIDS();
+    logn("Running GET_CEIDS ---------------------------!");
+    GET_CEIDS();
+    logn("Running GET_RPTIDS ---------------------------!");
+    GET_RPTIDS();
+    logn("Running GET_PPLIB ---------------------------!");
+    GET_PPLIB();
+    logn("Running Test_Read_Dictionary ---------------------------! ");
+    Test_Read_Dictionary();
+    logn("Running Test_Compare_Dictionary ---------------------------!");
+    Test_Compare_Dict();
+
+    // This will pass the SVIDS dictionary and then 
+    // the vid field of the first structure of the dictionary
+    // so that it will print out the vid fields of all 
+    // structs in the dictionary.
+    logn("Running Print_Dictionary(SVIDS, name, value) ---------------------------!");
+    Print_Dictionary(SVIDS, StructureOf(SVIDS[0]).name, StructureOf(SVIDS[0]).value);
+    logn("\n\n");
+    logn("Running Print_Dictionary(ALIDS, alid, alcd) ---------------------------!");
+    Print_Dictionary(ALIDS, StructureOf(ALIDS[0]).alid, StructureOf(ALIDS[0]).alcd);
+    
+    logn("\n All Tests Complete. ---------------------------!");
+    GuiMsgBox("Dictionary Tests", "Dictionary Scripts Complete", MB_OK + MB_ICONINFORMATION);
+}
+
+
+/*------------------------------------------------------------------------
+This script will take a dictionary and write it to a file.
+This script will query every element in the dictionary to determine
+the field names, this makes it possible to write dictionaries that
+are made up of different structure types.
+------------------------------------------------------------------------*/
+Write_Dictionary(D_Name, D_Filename)
+{
+
+    Local i, j, testNeg, testStr;    
+    Local data;            // an SSL list that holds data
+    Local complete_data;   // an SSL list that holds data
+    Local t_format;
+    Local t_data;
+    Local actual_struct;
+    Local actual_field_value;
+        
+    complete_data = NewList();  
+       
+    // for each item in the dictionary, format it
+    // and prepare it for output.     
+    for (i = 0; i < GetCount(D_Name); i = i + 1)
+    {    
+        // the structure fields start at 2 and go on... 
+        data = NewList();     
+        
+        // obtain an instance of the structure representing
+        // this entry in the dictionary
+        actual_struct = StructureOf(D_Name[i]);
+        logn(actual_struct);
+		
+        for (j = 0; j < GetCount(actual_struct); j = j + 1)
+        {
+			//logn("I'm IN");
+            // determine what Format the value is and then we
+            // will know how to format the value in SECS representation
+            
+            // This is cool, now obtain the name of the field from
+            // the structure by using the () around the structure
+            // name and the [] to get the structure field!!
+            actual_field_value = D_Name[i].(actual_struct[j]);
+			//logn(actual_field_value);
+            t_format = Get_Type(actual_field_value);
+            //logn(t_format);
+            switch(t_format)
+                {
+                case "STRING":
+					testStr = ToAscii(actual_field_value);
+					logn(actual_field_value, " Vs. ", testStr);
+					t_data   = <A testStr>;
+                    //t_data   = <A actual_field_value>;
+                    break;
+                
+                case "INT":
+					testNeg = ToAscii(actual_field_value);
+					logn(actual_field_value, " Vs. ", testNeg);
+					if (testNeg[0] == "-"){
+						actual_field_value = AtoI(SubString(actual_field_value, 1));
+						logn("Integer value: ", actual_field_value);
+					}
+                    t_data = <U4 actual_field_value>;
+                    break;
+                
+                case "REAL":
+                    t_data = <F8 actual_field_value>;
+                    break;
+                
+                case "SECS":
+                    t_data = actual_field_value;
+                    break;
+
+                case "LIST":
+                    t_data = S2_L(actual_field_value);
+                    break;
+					
+                 case "UNKNOWN":  // Turn Empty Values into empty strings.
+                    t_data = <A actual_field_value>;
+               break;
+
+                }
+            // now that we are done formating the data set t_format too.
+            t_format = <A t_format>;
+            
+            //logn(t_format);
+            dump(t_data);
+            //logn("actual struct= ", actual_struct[j]);
+            
+            // We are writing FieldName, Type, Value for
+            // each passed in structure field
+            data = InsertFirst( <L <A actual_struct[j]>
+                            t_format
+                            t_data
+                            > , data);
+            
+            
+            // () makes it get the struct field name.
+			//logn(Get_Type(D_Name[0].(actual_struct[j])));
+    
+        }
+        data = Reverse(data);
+        complete_data = InsertFirst(<L data>, complete_data);    
+    }
+    complete_data = Reverse(complete_data);
+    FileWrite(D_Filename, <L complete_data>);
+    Logn("Wrote Dictionary with ", GetCount(complete_data), " items.");
+}
+
+
+/*------------------------------------------------------------------------
+Get ALL Status VID's from equipment
+------------------------------------------------------------------------*/
+GET_SVIDS()
+{
+
+    Local i;
+    Local s1f4_msg;
+    Local s1f12_msg;
+    Local struct_item;
+    Local vid_count;
+    Local junk;
+    
+	logn("Thinh -> GET_SVIDS()");
+	
+    // Make a Dictionary with a vid as a key.
+    SVIDS = NewDictionary(VID_STRUCT.vid);
+
+    // S1F11 is the SECS Message which gets names and units
+    // of SVID's, S1F3 will get all values, combined they
+    // will have everything I need to populate my SVID's 
+    // Dictionary
+    s1f4_msg = SendPrimary(<S1F3 W <L> >);
+    s1f4_msg = wait(s1f4_msg);
+    
+    vid_count = GetCount(s1f4_msg.text);
+    //logn ("vid count = ", vid_count);    
+    
+    s1f12_msg = SendPrimary(<S1F11 W <L> >);
+    s1f12_msg = wait(s1f12_msg);
+    
+    vid_count = GetCount(s1f4_msg.text);
+    //logn ("vid count = ", vid_count);    
+    
+    
+    // now parse out the data
+    // S1F4 <L [n]
+    //          <SVVAL>
+    //          ...
+    //      >.
+
+    // now parse out the data
+    // S1F12 <L [n]
+    //          <L [3]
+    //             <SVID>
+    //             <SVNAME>
+    //             <UNITS>
+    //          >
+    //             ...
+    //       >.
+
+    // TODO: improve speed here, use Decode, 
+    // Smart_Decode repeats work
+    
+    for (i=1; i <= vid_count; i = i + 1)
+    {
+        junk = NewStructured(VID_STRUCT);
+        junk.format  = Smart_GetFormat(s1f4_msg.text, i);
+        junk.value   = Smart_Decode(s1f4_msg.text, i);
+    
+        // if it's a SSL list then save it as a SECS II List.
+        if (IsList(junk.value))
+        {
+            junk.value = <L junk.value>;
+        }
+        
+        junk.vid     = Smart_Decode(s1f12_msg.text, i, 1);
+        junk.name    = Smart_Decode(s1f12_msg.text, i, 2);
+        junk.units   = Smart_Decode(s1f12_msg.text, i, 3);
+        
+        DictionaryInsert(junk, SVIDS);
+    }
+    
+    //dump(SVIDS);
+    Write_Dictionary(SVIDS, "C:\\svid.dic");
+                     
+    logn("Done Writing");
+    
+    logn("Thinh <- GET_SVIDS()");
+}
+
+/*------------------------------------------------------------------------
+Get ALL ECID's from equipment
+------------------------------------------------------------------------*/
+public GET_ECIDS()
+{
+
+    Local i;
+    Local s2f14_msg;
+    Local s2f30_msg;
+    Local struct_item;
+    Local ecid_count;
+    Local junk;
+    
+    // Make a Dictionary with a vid as a key.
+    ECIDS = NewDictionary(ECID_STRUCT.vid);
+
+    // S2F29 is the SECS Message which gets names and units
+    // of ECID's, S2F13 will get all values, combined they
+    // will have everything I need to populate my ECID's 
+    // Dictionary
+    s2f14_msg = SendPrimary(<S2F13 W <L> >);
+    s2f14_msg = wait(s2f14_msg);
+    
+    ecid_count = GetCount(s2f14_msg.text);
+        
+    s2f30_msg = SendPrimary(<S2F29 W <L> >);
+    s2f30_msg = wait(s2f30_msg);
+    
+      
+    // now parse out the data
+    // S2F14 <L [n]
+    //          <ECV>
+    //          ...
+    //      >.
+
+    // now parse out the data
+    // S2F30 <L [n]
+    //          <L [6]
+    //             <ECID>
+    //             <ECNAME>
+    //             <ECMIN>
+    //             <ECMAX>
+    //             <ECDEF>
+    //             <UNITS>
+    //          >
+    //             ...
+    //       >.
+
+
+    // TODO: improve speed here, use Decode, 
+    // Smart_Decode repeats work
+    
+    //Structure ECID_STRUCT ( format, vid, ecname, ecmin, ecmax, ecval, ecdef, units );
+
+    for (i=1; i <= ecid_count; i = i + 1)
+    {
+        junk = NewStructured(ECID_STRUCT);
+        junk.format  = Smart_GetFormat(s2f14_msg.text, i);
+        junk.ecval   = Smart_Decode(s2f14_msg.text, i);
+
+        // if it's a SSL list then save it as a SECS II List.
+        if (IsList(junk.ecval))
+        {
+            junk.ecval = <L junk.ecval>;
+        }
+
+        junk.vid     = Smart_Decode(s2f30_msg.text, i, 1);
+        junk.ecname  = Smart_Decode(s2f30_msg.text, i, 2);
+        junk.ecmin   = Smart_Decode(s2f30_msg.text, i, 3);
+        junk.ecmax   = Smart_Decode(s2f30_msg.text, i, 4);
+        junk.ecdef   = Smart_Decode(s2f30_msg.text, i, 5);
+        junk.units   = Smart_Decode(s2f30_msg.text, i, 6);
+        
+        
+        DictionaryInsert(junk, ECIDS);
+    }
+    
+    dump(ECIDS);
+    Write_Dictionary(ECIDS, "C:\\ecid.dic");
+    logn("Done Writing");
+}
+
+/*------------------------------------------------------------------------
+Get ALL Status DVID's from equipment
+------------------------------------------------------------------------*/
+GET_DVIDS()
+{
+
+    Local i;
+    Local s1f3_msg;
+    Local s1f4_msg;
+    Local s1f12_msg;
+    Local msg_body;
+    Local struct_item;
+    Local vid_count;
+    Local junk;
+    Local max_vid;
+    Local min_vid;
+    Local namelist_data;
+    Local vid_data;
+    Local query;
+    Local S1f4_temp_data;
+    Local S1f12_temp_data;
+    
+	logn("Thinh -> GET_DVIDS()");
+	
+    // Make sure the SVIDS and the ECIDS dictionaries
+    // have already been created.
+    if (!IsDictionary(SVIDS))
+    {
+        GET_SVIDS();
+    }
+    if (!IsDictionary(ECIDS))
+    {
+        GET_ECIDS();
+    }
+    
+    
+    // Make a Dictionary with a vid as a key.
+    DVIDS = NewDictionary(VID_STRUCT.vid);
+
+      // For DVID's I am doing a little trick of forming the
+    // S1F3 and S1F11 message body by looking up a VID number
+    // in the SVIDS and ECIDS dictionary, if it is not in there
+    // I then add that to my SECS message, then later when I
+    // get the response, if it is not empty then I know
+    // I have found a DVID
+    
+    // Get the Min & Max VID number to check for
+    min_vid = GuiGetInteger("Enter Min VID number: ");
+    max_vid = GuiGetInteger("Enter Max VID number: ");
+    
+    junk = NewStructured(VID_STRUCT);
+    msg_body = NewList();
+    for (i = min_vid; i <= max_vid; i = i + 1)
+    {
+        Wait();
+        junk.vid = i;
+        struct_item = DictionaryLookup(junk, SVIDS);
+        // dump(struct_item);
+        // if we DID NOT find one, then check ECIDS
+        if (IsEmptyList(struct_item))
+        {
+            struct_item = DictionaryLookup(junk, ECIDS);
+            // if we DID NOT find it here then add it to my SECS msg.
+            if(IsEmptyList(struct_item))
+            {
+               msg_body = InsertFirst(<U4 i> , msg_body);    
+            }
+        }
+    }
+    
+    // Now I have the list of VIDs which MIGHT be DVIDS.  They
+    // are DVIDS or they are INVALID (unused) VIDS!
+    // Put it in numeric order
+    msg_body = Reverse(msg_body);
+    
+    // Must save S1f3 so that I can look into it if the namelist
+    // data comes back as empty for some reason.
+    s1f3_msg = NewMessage(<S1F3 W <L msg_body>>); 
+    
+    // If I used s1f3_msg here, it would be modified by
+    // SendPrimary so I have to use specific message again.
+    s1f4_msg = SendPrimary(<S1F3 W <L msg_body>>);
+    s1f4_msg = wait(s1f4_msg);
+    
+    vid_count = GetCount(s1f4_msg.text);
+    logn ("vid count = ", vid_count);    
+        
+    s1f12_msg = SendPrimary(<S1F11 W <L msg_body>>);
+    s1f12_msg = wait(s1f12_msg);
+    
+    vid_count = GetCount(s1f4_msg.text);
+    
+    // now parse out the data
+    // S1F4 <L [n]
+    //          <SVVAL>
+    //          ...
+    //      >.
+
+    // now parse out the data
+    // S1F12 <L [n]
+    //          <L [3]
+    //             <SVID>
+    //             <SVNAME>
+    //             <UNITS>
+    //          >
+    //             ...
+    //       >.
+
+
+    // for each item in the message let's see if
+    // it is a valid DVID    
+    logn("About to process replies");
+    
+    // This will return an SSL list with valid lists of 3 or empty
+    // Lists which show that the data is possibly not a DV.
+    // ( <L [3] <SVID> <SVNAME> <UNITS>> or <L [0]> ... )
+    
+    s1f12_temp_data = Decode(s1f12_msg.text);
+    s1f4_temp_data  = Decode(s1f4_msg.text);
+    
+    for (i=0; i < vid_count; i = i + 1)
+    {
+        junk = NewStructured(VID_STRUCT);
+        
+        // get the list of 3 or empty list of the
+        // namelist request message
+        namelist_data = s1f12_temp_data[i];
+        
+        // if the vid is not valid then this could be 
+        // bad data, so insert the number from s1f3_msg
+        // and ask the user if they are sure this is a 
+        // DVID, this may be a undefined or private VID.
+        //if (IsEmptyList(junk.vid))
+        
+        if (GetCount(namelist_data) == 0)
+        {
+            junk.vid     = Smart_Decode(s1f3_msg.text, i+1);
+            junk.name    = "UNKNOWN";
+            junk.units   = "UNKNOWN";
+            
+            junk.format  = "L";
+            junk.value   = <L>;
+
+            
+            // If it is an empty list then the value is not 
+            // a valid value or it is an empty DVID
+            // So, we will prompt the user!!
+            
+            /* query = GuiMsgBox(CatString("VID Number ", ToAscii(junk.vid)), 
+               "Are you sure this is a valid DVID, it has no namelist?", 
+               MB_YESNO + MB_ICONQUESTION); 
+               
+            if (query == IDYES)
+            {
+                junk.value = <L>;
+                DictionaryInsert(junk, DVIDS);
+            }
+            */
+        }        
+        else  // it should be OK.  
+        {
+            Wait();  // allow others to run...
+            
+            //so we have a SECS <L [3] <SVID> <SVNAME> <UNITS>>
+            
+            // to get the real vid I need to decode the message
+            // and pull out the first item in the list
+            namelist_data = Decode(namelist_data);
+            
+            junk.vid   = S2_Decode(namelist_data[0]);
+            junk.name  = S2_Decode(namelist_data[1]);
+            junk.units = S2_Decode(namelist_data[2]);
+            
+            // use s1f4_temp_data to determine what is up...
+            junk.format  = GetFormat(s1f4_temp_data[i])[0];
+            junk.value   = S2_Decode(s1f4_temp_data[i]);
+            
+            //dump(junk);
+            //Abort();
+        
+            // if it's a SSL list then save it as a SECS II List.
+            if (IsList(junk.value))
+            {
+                junk.value = <L junk.value>;
+            }
+            
+            //logn("Inserting in Dictionary.");
+            //dump(junk);
+            DictionaryInsert(junk, DVIDS);
+            //logn("After Inserting in Dictionary.");
+        }
+    }
+    dump(DVIDS);    
+    Write_Dictionary(DVIDS, "C:\\dvid.dic");
+    logn("Done Writing");
+	
+	logn("Thinh <- GET_DVIDS()");
+}
+
+/*------------------------------------------------------------------------
+Get ALL ALARM information from the equipment
+------------------------------------------------------------------------*/
+GET_ALIDS()
+{
+
+    Local i, j;
+    Local key_value;
+    Local s5f8_msg;
+    Local s5f6_msg;
+    Local struct_item;
+    Local enabled_alid_count;
+    Local total_alid_count;
+    Local junk;
+    
+    // Make a Dictionary with a vid as a key.
+    ALIDS = NewDictionary(ALID_STRUCT.alid);
+
+    // S5F7 is the SECS Message which lists all enabled alarms
+    // S5F5 will get all values, combined they
+    // will have everything I need to populate my ALID's 
+    // Dictionary
+    s5f8_msg = SendPrimary(<S5F7 W>);
+    s5f8_msg = wait(s5f8_msg);
+    enabled_alid_count = GetCount(s5f8_msg.text);
+    //logn ("enabled alid count = ", enabled_alid_count);    
+        
+    s5f6_msg = SendPrimary(<S5f5 W <I2>>);
+    s5f6_msg = wait(s5f6_msg);
+    total_alid_count = GetCount(s5f6_msg.text);
+    //logn ("total alid count = ", total_alid_count);    
+    
+      
+    // now parse out the data
+    // ONLY enabled alarms.
+    // S5F8 <L [n]
+    //          <L [3]
+    //             <ALCD>
+    //             <ALID>
+    //             <ALTX>
+    //          >
+    //             ...
+    //       >.
+
+    // now parse out the data
+    // ALL alarms on the equipmnet
+    // S5F6 <L [n]
+    //          <L [3]
+    //             <ALCD>
+    //             <ALID>
+    //             <ALTX>
+    //          >
+    //             ...
+    //       >.
+
+    // Now we loop through all the alarms and populate
+    // the dictionary, then we go back through and we
+    // set the enabled flag in a second pass
+
+    // TODO: improve speed here, use Decode, 
+    // Smart_Decode repeats work
+    for (i=1; i <= total_alid_count; i = i + 1)
+    {
+        junk = NewStructured(ALID_STRUCT);
+
+        junk.alcd    = Smart_Decode(s5f6_msg.text, i, 1);
+        junk.alid    = Smart_Decode(s5f6_msg.text, i, 2);
+        junk.altx    = Smart_Decode(s5f6_msg.text, i, 3);
+        
+        // Ther is no way to determine ceid's for the alarm going on and off.
+        // Can only get from user documentation or GW's GCP file.
+        junk.ceon    = 0;
+        junk.ceoff   = 0;
+        
+        junk.enabled = 0;  // Assume there are no alarms enabled
+        junk.state   = 0;  // Assume there are no alarms active
+        
+        DictionaryInsert(junk, ALIDS);
+        // logn(ALIDS);
+    }
+
+
+    // now set the enabled field to a 1, this means enabled!
+    for (i=1; i <= enabled_alid_count; i = i + 1)
+    {
+        // in order to modify an item in the dictionary,
+        // I obtain the key field (ALID) from the SECS
+        // message that was returned.  I then make a new
+        // structure and set just the key field (ALID) to
+        // the value that I wish to find in the dictionary,
+        // if it exists then I set it's enabled field to 1.
+        key_value = Smart_Decode(s5f8_msg.text, i, 2);
+        junk = NewStructured(ALID_STRUCT);
+        junk.alid = key_value;
+        
+        struct_item = DictionaryLookup(junk, ALIDS);
+        if (struct_item)
+        {
+            struct_item.enabled = 1;
+        }        
+    }
+    
+    Write_Dictionary(ALIDS, "C:\\alid.dic");
+    logn("Done Writing");
+}
+
+/*------------------------------------------------------------------------
+Get ALL EVENT information from the equipment
+------------------------------------------------------------------------*/
+GET_CEIDS()
+{
+
+    Local i;
+    Local s2f38_msg;
+    Local s1f4_msg;
+    Local events_enabled_vid;
+    Local junk;
+    Local ceid_count;
+    
+	logn("Thinh -> GET_CEIDS()");
+	
+    // Make a Dictionary with a ceid as a key.
+    CEIDS = NewDictionary(CEID_STRUCT.ceid);
+
+    // now parse out the data
+    // S2F37 W
+    // <L [2] 
+    //    <CEED>      enable/disable <Boolean 0x1>
+    //    <L>
+    // >.
+      
+    // On our test equipment VID 30 is EVENTSENABLED.
+    // prompt the user for their number here!!
+    events_enabled_vid = GuiGetInteger("Enter VID for EventsEnabled: ");
+      
+    s2f38_msg = SendPrimary(<S2F37 W <L <BOOLEAN 0x1> <L> > >);  
+    s2f38_msg = Wait(S2F38_msg);
+          
+    s1f4_msg = SendPrimary(<S1F3 W <L <U4 events_enabled_vid>> >);  
+    s1f4_msg = Wait(s1f4_msg);
+
+    ceid_count = GetCount(Decode(s1f4_msg.text)[0]);
+    logn(ceid_count);
+    
+    /* probably will look something like this...
+    <S1F4
+        <L
+            <L
+                <U4 1>
+                <U4 2>
+                    ...
+                <U4 1003>
+            >
+        >
+    >
+    */
+
+    // TODO: improve speed here, use Decode, 
+    // Smart_Decode repeats work
+    // now save it in the Dictionary
+    for (i=1; i <= ceid_count; i = i + 1)
+    {
+        junk = NewStructured(CEID_STRUCT);
+        junk.name = "UNKNOWN";
+        
+        // The plus 0 just makes it a bit cleaner when looking 
+        // at dumps() for debugging, has no other use.
+        // (makes it use the smallest number of bytes)
+        junk.ceid = Smart_Decode(s1f4_msg.text, 1, i) + 0;
+        
+        DictionaryInsert(junk, CEIDS);
+    }
+  
+    Write_Dictionary(CEIDS, "C:\\Host\ceid.dic");
+    logn("Done Writing");
+	
+	logn("Thinh <- GET_CEIDS()");
+}
+
+/*------------------------------------------------------------------------
+Get ALL REPORT IDs information from the equipment
+------------------------------------------------------------------------*/
+
+// Can't use GET_RPTIDS now because tool does not support S6F17
+
+GET_RPTIDS()
+{
+    
+    Local i,j,k;
+    Local min_rptid;
+    Local max_rptid;
+    Local s6f22_msg;
+    Local s6f18_msg;
+    Local junk;
+    Local ceid_count;
+    Local rptid_count;
+    Local values_list;
+    Local vids_list;
+    Local temp_format;
+    Local temp_value;
+    
+	logn("Thinh -> GET_RPTIDS()");
+	
+    // Make a Dictionary with a report id as a key.
+    RPTIDS = NewDictionary(RPTID_STRUCT.rptid);
+
+    // first we can see if there are any reports
+    // linked to events, if so then we will have
+    // some S6F21 messages to send automatically.
+    // To check for this send then S6F17 messages
+    // for each item in our CEIDS dictionary (CEIDS).
+    
+    // first make sure we have a populated CEIDS dictionary
+    if (!IsDictionary(CEIDS))
+    {
+        GET_CEIDS();    
+    }
+
+    // Create a S6F17 for ever CEID, then parse the answer
+    // Add it to the Dictionary if it comes back as non empty.
+    
+    // How many CEIDS are in the CEIDS dictionary?
+    ceid_count = GetCount(CEIDS);
+    for (i = 0; i < ceid_count; i = i + 1)
+    {
+   
+        // Note: I just happen to know that the field in the
+        // CEIDS dictionary is .ceid...
+        s6f18_msg = SendPrimary(<S6F17 W <U4 CEIDS[i].ceid>>);  
+        s6f18_msg = Wait(s6f18_msg);
+
+        // The answer will be an emtpy List for S6F16 or the
+        // following message if there was a report...
+        /*
+        S6F18 W
+        <L [3]
+            <U2 0>                  DATAID
+            <U2 1>                  CEID  
+            <L    This will be 0 if there are no reports!!!
+                <L [2]
+                    <U2 1>          RPTID  
+                    <L              Number of VID/Value pairs
+                        <L [2]
+                            <U2 1>  VID
+                            <I2 7>  Value
+                        >
+                        <L [2]
+                            <U2 2>  VID
+                            <U1 4>  Value
+                        >
+                    >
+                >
+                ...
+            >
+        > .
+        */    
+        
+        // chriss !!!!!!!!
+        // I have found a problem with Smart_Decode.
+        // I am not sure if it effects any other routine.
+        // It seems that if a List is requested to be decoded
+        // and the list has exactly one element that is 
+        // another list then the Smart_Decode will return 
+        // that List.  This is probably OK, except that the
+        // caller wanted to know the count of items in the
+        // original list.  If the caller assumes 1, that is 
+        // bad... I am trying an experiment in Smart_decode.
+        
+        //dump(Smart_Decode(s6f18_msg.text, 3));
+        rptid_count = GetCount(Smart_Decode(s6f18_msg.text, 3));
+        //logn("Already Linked Report ID Count: ",rptid_count,".");
+        
+        // Only proceed if this has a report attached
+        if (rptid_count != 0) 
+        {
+            values_list = NewList();    
+            vids_list = NewList();    
+        
+            junk = NewStructured(RPTID_STRUCT);
+        
+            // now save it in the Dictionary
+            for (j = 1; j <= rptid_count; j = j + 1)
+            {
+                junk.rptid = Smart_Decode(s6f18_msg.text, 3, j, 1);
+                temp_value_count = GetCount(Smart_Decode(s6f18_msg.text, 3, j, 2));
+                
+               
+                for (k = 1; k <= temp_value_count; k = k + 1)
+                {
+                
+                    // Inorder to turn data into a SECS II list
+                    // each item needs to be SECS objects.
+                    // I will store the VALUES and VIDS as atomic
+                    // SECS objects!  This will need to be understood
+                    // when viewing this data later!!!
+                    temp_format = Smart_GetFormat(s6f18_msg.text, 3, j, 2, k, 2);          
+                    temp_value = Smart_Decode(s6f18_msg.text, 3, j, 2, k, 2);
+                    vids_list = InsertFirst(Catstring("S2_", ToAscii(temp_format))(temp_value), vids_list);
+                           
+                    temp_format = Smart_GetFormat(s6f18_msg.text, 3, j, 2, k, 1);          
+                    temp_value = Smart_Decode(s6f18_msg.text, 3, j, 2, k, 1);
+                    values_list = InsertFirst(Catstring("S2_", ToAscii(temp_format))(temp_value), values_list);
+                }
+            }    
+        
+            // only insert into the dictionary if we have
+            // something of interest to insert.
+            if (rptid_count != 0)
+            {
+                vids_list = Reverse(vids_list);
+                values_list = Reverse(values_list);
+                junk.vids   = <L vids_list>;
+                junk.values = <L values_list>;
+            
+                DictionaryInsert(junk, RPTIDS);
+            }
+        }
+    }    
+               
+    // Now to make sure we have sent a request for
+    // any reports that might not be linked to 
+    // an event we will ask the user for a range
+    // and then we will send many S6F21 messages...
+    
+    // Get the Min & Max RPTID number to check for
+    min_rptid = GuiGetInteger("Enter Min RPTID number: ");
+    max_rptid = GuiGetInteger("Enter Max RPTID number: ");
+    
+    // I know create my S6F21 message based on the range 
+    // given by the operator.  
+    for (i = min_rptid; i <= max_rptid; i = i + 1)
+    {
+    
+        // check to see if we already found it
+        junk = NewStructured(RPTID_STRUCT);
+        junk.rptid = i;
+        if (DictionaryLookup(junk, RPTIDS))
+        {
+            logn("Already Have an entry for Report ", i, ".");
+            continue;
+        }
+        
+        s6f22_msg = SendPrimary(<S6F21 W <U4 i>>);  
+        s6f22_msg = Wait(s6f22_msg);
+
+        rptid_count = GetCount(s6f22_msg.text);
+        // logn(rptid_count);
+    
+        /* probably will look something like this...
+        S6F22
+        <L
+            <L 
+                <VID1>
+                <V1>
+            >
+            ...
+            <L 
+                <VIDn>
+                <Vn>
+            >
+        >.
+   
+        */
+        
+        // Structure RPTID_STRUCT ( rptid, vids, values );
+        
+        values_list = NewList();    
+        vids_list = NewList();    
+        
+        junk = NewStructured(RPTID_STRUCT);
+        
+        // now save it in the Dictionary
+        for (j=1; j <= rptid_count; j = j + 1)
+        {
+            junk.rptid = i;
+            
+            // Inorder to turn data into a SECS II list
+            // each item needs to be SECS objects.
+            // I will stort the VALUES and VIDS as atomic
+            // SECS objects!  This will need to be understood
+            // when viewing this data later!!!
+            temp_format = Smart_GetFormat(s6f22_msg.text, j, 1);          
+            temp_value = Smart_Decode(s6f22_msg.text, j, 1);
+            vids_list = InsertFirst(Catstring("S2_", ToAscii(temp_format))(temp_value), vids_list);
+                       
+            temp_format = Smart_GetFormat(s6f22_msg.text, j, 2);          
+            temp_value = Smart_Decode(s6f22_msg.text, j, 2);
+            values_list = InsertFirst(Catstring("S2_", ToAscii(temp_format))(temp_value), values_list);
+            
+        }    
+        
+        // only insert into the dictionary if we have
+        // something of interest to insert.
+        if (rptid_count != 0)
+        {
+            vids_list = Reverse(vids_list);
+            values_list = Reverse(values_list);
+            junk.vids   = <L vids_list>;
+            junk.values = <L values_list>;
+        
+            DictionaryInsert(junk, RPTIDS);
+        }
+    }
+    // dump(RPTIDS);
+       
+    Write_Dictionary(RPTIDS, "C:\\rptid.dic");
+    logn("Done Writing");
+	
+	logn("Thinh <- GET_RPTIDS()");
+}
+
+
+
+
+
+/*------------------------------------------------------------------------
+This will simply get the current ppid's and bodies from the equipment and
+save them on the host in a dictionary.
+------------------------------------------------------------------------*/
+GET_PPLIB()
+{
+
+    Local i;
+    Local s7f20_msg;
+    Local s7f6_msg;
+    Local ppid_count;
+    Local list_of_ppids;
+    
+    // Make a Dictionary with a vid as a key.
+    PPLIB = NewDictionary(PPLIB_STRUCT.ppid);
+
+    // S7F19 is the SECS Message which gets names of PP's
+    // I will then use S7F5 to request an upload of the
+    // PPbody.
+    s7f20_msg = SendPrimary(<S7F19 W>);
+    s7f20_msg = wait(s7f20_msg);
+    
+    //dump(S7f20_msg);
+    
+    ppid_count = GetCount(s7F20_msg.text);
+    logn ("ppid count = ", ppid_count);    
+    
+    // now parse out the data
+    // S7F20 <L [n]
+    //          <PPID>
+    //          ...
+    //       >.
+
+    // now parse out the data
+    // S7F6 <L [n]
+    //          <L [2]
+    //             <PPID>
+    //             <PPBODY>
+    //          >
+    //             ...
+    //       >.
+
+    // make sure we have some work to do
+    if (ppid_count != 0)
+    {
+        // get the list of process programs,  This will
+        // return a SSL list of (<PPID>  ... <PPID>)
+        list_of_ppids = NewList();
+        list_of_ppids = Decode(s7f20_msg.text);
+        
+        // dump(list_of_ppids);
+        
+        for (i = 0; i < ppid_count; i = i + 1)
+        {
+    
+            // send S7F5 to get PPBODY's
+            s7f6_msg = SendPrimary(<S7F5 W <list_of_ppids[0]> >);
+            s7f6_msg = wait(s7F6_msg);
+
+            junk = NewStructured(PPLIB_STRUCT);
+            // save the name here for ppid
+            junk.ppid = Decode(list_of_ppids[0])[0];
+            
+            // save the SECS object for the PPBODY
+            junk.ppbody = Decode(s7f6_msg.text)[1];
+            
+            //logn(junk);
+            DictionaryInsert(junk, PPLIB);
+        }
+    
+    
+        Write_Dictionary(PPLIB, "C:\\pplib.dic");
+                     
+        logn("Done Writing");
+    } 
+    else
+    {
+        logn("No PPID's exist on the equipment");
+    }
+
+}
+
+
+
+/*------------------------------------------------------------------------
+This function will return a string which represents the type of the
+data so that it can be used as part of a function which records 
+different data to a file.
+------------------------------------------------------------------------*/
+Get_Type(The_Data_Object)
+{
+    if (IsString(The_Data_Object))  return ("STRING");
+    else if (IsInteger(The_Data_Object)) return ("INT");
+    else if (IsReal(The_Data_Object))    return ("REAL");
+    else if (IsSECS(The_Data_Object))    return ("SECS");
+    else if (IsList(The_Data_Object))    return ("LIST");
+    return ("UNKNOWN");
+}
+
+
+/*------------------------------------------------------------------------
+This function will read in a dictionary that was written to a file
+using Write_Dictionary.  It requires that the Dictionary have only
+one strucutre type in it and that this be passed in.  
+
+TODO: figure out if there is a way to support dictionaries with 
+different structures dynamically.
+
+------------------------------------------------------------------------*/
+Read_Dictionary(D_Name, D_Filename, D_Struct)
+{
+
+    Local i, j, k;
+    Local file_data;
+    Local each_item;
+    Local each_name;
+    Local each_format;
+    Local each_value;
+    Local d_count;
+    Local struct_count;
+   
+    
+    file_data = FileRead(D_Filename);
+    file_data = CheckSECSFormat(file_data);
+    
+    // The data we just read in will be a list of n lists.
+    // the first count will tell me how many items are in
+    // this dictionary.  Let's get that first.
+    d_count = GetCount(file_data);
+    struct_count = GetCount(Smart_Decode(file_data, 1));
+    
+    // For each item in the Dictionary I will have to determine
+    // the structure type so that I can make a variable of
+    // that type.  I will then use NewStructured and fill
+    // in the data.
+    
+    for (i=1; i <= d_count; i = i + 1)
+    {
+        // get a new object to add to the dictionary
+        each_item = NewStructured(D_Struct); 
+        for (j = 1; j <= struct_count; j = j + 1)
+        {
+            // get the name
+            each_name = Smart_Decode(file_data, i, j, 1);
+            //logn("name", each_name);
+            
+            // get the format of the data
+            each_format = Smart_Decode(file_data, i, j, 2);
+            //logn("format= ", each_format);
+            
+            // get the data and format it correctly
+            each_value = Smart_Decode(file_data, i, j, 3);
+           // logn("val ", each_value);
+            
+            // place it in the structure
+            if (each_format == "SECS")
+                {
+                each_value = Catstring("S2_", Smart_GetFormat(file_data, i, j, 3))(each_value);
+             //   logn(each_value);
+                }     
+                
+            // get the int back to minimal storage.  Just for looks.    
+            if (each_format == "INT")
+                {
+                each_value = each_value + 0;
+                }
+                
+            each_item.(each_name) = each_value;
+        }
+        // place it in the dictionary
+        DictionaryInsert(each_item, D_Name);
+    }
+  //  dump(D_Name);
+}
+
+/*------------------------------------------------------------------------
+
+------------------------------------------------------------------------*/
+Test_Read_Dictionary()
+{
+    SVIDS2 = NewDictionary(VID_STRUCT.vid);
+    
+    Read_Dictionary(SVIDS2, "C:\\svid.dic", VID_STRUCT);
+    logn("Done Reading");
+    
+}
+/*------------------------------------------------------------------------
+This function will take the names of 2 dictionaries and the structure
+name fields and compare to the dictionaries have the same data in them.
+Today, this is done by comparing the field by field values.
+------------------------------------------------------------------------*/
+Compare_Dict(D1, D2)
+{
+    Local i, j, k;
+    Local D1_Count;
+    Local count_D1_struct_fields;
+    Local count_D2_struct_fields;
+    Local D1_actual_struct;
+    Local D1_actual_field_value;
+    Local D2_actual_struct;
+    Local D2_actual_field_value;
+    
+    // if no parameters then ask user for dictionaries to compare.
+    if (GetCount(arglist) == 0)
+    {
+        D1 = GuiGetString("Enter First Dictionary: ");
+        D1 = LookupName(D1);
+        D2 = GuiGetString("Enter Second Dictionary: ");
+        D2 = LookupName(D2);
+
+    }
+    
+    
+    // Check to see if they have the same number of entries
+    D1_Count = GetCount(D1);
+    if (D1_Count != GetCount(D2)) 
+    {
+        if (GetCount(arglist) == 0)
+        {
+            logn("Dictionaries do NOT match!");
+        }
+
+        return (FALSE);
+    }
+    
+    // for each structure in the dictionary
+    // check to see if each and every structure field has the same data
+    for (i = 0; i < D1_Count; i = i + 1)
+    {
+        // check to see if each and every structure field has the same data
+        //for (j = 2; j < GetCount(arglist); j = j + 1)
+        
+        // obtain an instance of the structure representing
+        // this entry in the dictionary and then use GetCount
+        // to obtain the number of fields in this structure.
+        D1_actual_struct = StructureOf(D1[i]);
+        count_D1_struct_fields = GetCount(D1_actual_struct);
+        
+        D2_actual_struct = StructureOf(D2[i]);
+        count_D2_struct_fields = GetCount(D2_actual_struct);
+        
+        
+        if (count_D1_struct_fields == count_D2_struct_fields)
+        {
+            for (j = 0; j < count_D1_struct_fields; j = j + 1)
+            {
+            
+                // This is cool, now obtain the name of the field from
+                // the structure by using the () around the structure
+                // name and the [] to get the structure field!!
+                D1_actual_field_value = D1[i].(D1_actual_struct[j]);
+                D2_actual_field_value = D2[i].(D2_actual_struct[j]);
+           
+                if (D1_actual_field_value != D2_actual_field_value)
+                {
+                    if (GetCount(arglist) == 0)
+                    {
+                        logn("Dictionaries do NOT match!");
+                    }
+                    return (FALSE);
+                }
+        
+            }
+        }
+        else
+        {
+            if (GetCount(arglist) == 0)
+            {
+                logn("Dictionaries do NOT match!");
+            }
+            return (FALSE);  // the count of fields did not match!
+        }
+    }
+    if (GetCount(arglist) == 0)
+    {
+        logn("Dictionaries Match!");
+    }
+    return(TRUE);
+}
+
+/*------------------------------------------------------------------------
+
+------------------------------------------------------------------------*/
+Test_Compare_Dict()
+{
+
+    if (Compare_Dict(SVIDS, SVIDS2) == TRUE)
+    {
+        logn("They are the same!!!!!!");
+    }
+    else
+    {
+        logn("They are NOT the same");
+    }
+}
+
+/*------------------------------------------------------------------------
+This function will prompt the operator for a dictionary and it will
+print out the requested field in that Dictionary.
+------------------------------------------------------------------------*/
+Print_Dictionary()
+{
+    Local dict_name_string;
+    Local i, j;
+    
+    // This can be run from within a script, if so then
+    // don't prompt the user.
+    if (IsEmptyList(arglist))
+    {
+        
+        dict_name_string = GuiGetString("Enter Dictionary: ");
+        
+        // Create the arglist and store the dict name in it
+        arglist = NewList(LookupName(dict_name_string));
+    }
+   
+    // Is that a valid dictionary??    
+    if (IsDictionary(arglist[0]))
+    {
+        if (GetCount(arglist) == 1)
+        {
+            // If so, then ask for fields in the structs to print...
+            arglist = InsertFirst(GuiGetString("Enter Field to print: "), arglist);
+            arglist = Reverse(arglist);
+        }
+        
+        // for every item in the dictionary
+        for (i = 0; i < GetCount(arglist[0]); i = i + 1)
+        {
+            // start at 1 to skip over dictionary...
+            for (j = 1; j < GetCount(arglist); j = j + 1)
+            {
+                log(arglist[j], " is = ", arglist[0][i].(arglist[j]), " | ");
+                //Abort();
+            }
+            logn();
+        }
+        
+        //GuiMsgBox("Completed Dictionary Printing", 
+        //    "Please examine the logfile for results...", MB_OK);
+    }
+    else
+    {
+        GuiMsgBox("I'm Sorry...", "That is not a valid Dictionary", MB_OK);
+    }
+}

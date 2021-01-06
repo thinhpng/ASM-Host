@@ -1,0 +1,2032 @@
+/*
+*
+*   File: EventReports.ssl
+*	Version: 1.0        
+*	Date: Feb 10, 2018
+*	Scripted by THINH P NGUYEN 
+*
+*/
+
+EventHandler(mS6F11Struct){
+	local mCeId, mReport, mReportId, mValues, mData, mVidVal, mResult, mStatus, mMaterialOReport, mPortLocID;
+	local mCarrierIDReport, mCarrierID;
+	
+	logn("Thinh -> EventHandler()" );	
+	//TestData(mS6F11Struct);
+	mCeId = mS6F11Struct.CeId;
+	
+	switch(mCeId){
+		case 69648: //EquipmentOFF-LINE
+					logn("*****  GOT EquipmentOFF-LINE  *****");
+					mReport 	= Decode(mS6F11Struct.reportList[1]);
+					mReportId 	= S2_Decode(mReport[0]);
+					CTRLREMOTE 	= 0;
+					if(mReportId == 131104){
+						mData 	= Decode(mReport[1])[0];
+						mVidVal = S2_Decode(mData);
+						mStatus = VerifyControlState(mVidVal);
+						logn("*****************************************************");
+						logn(mStatus);
+						logn("*****************************************************");
+					}
+					break;
+		case 69664: //ControlStateLOCAL
+					logn("*****  GOT ControlStateLOCAL *****");
+					mReport 	= Decode(mS6F11Struct.reportList[1]);
+					mReportId 	= S2_Decode(mReport[0]);
+					CTRLREMOTE	= 0;
+					if(mReportId == 131104){
+						mData 	= Decode(mReport[1])[0];
+						mVidVal = S2_Decode(mData);
+						mStatus = VerifyControlState(mVidVal);
+						logn("*****************************************************");
+						logn(mStatus);
+						logn("*****************************************************");
+					}
+					break;					
+		case 69680:	//ControlStateREMOTE
+					logn("*****  GOT ControlStateREMOTE  *****");
+					mReport 	= Decode(mS6F11Struct.reportList[1]);					
+					mReportId 	= S2_Decode(mReport[0]);
+					CTRLREMOTE	= 1;
+					if(mReportId == 131104){
+						mData 	= Decode(mReport[1])[0];
+						mVidVal = S2_Decode(mData);
+						mStatus = VerifyControlState(mVidVal);
+						logn("*****************************************************");
+						logn(mStatus);
+						logn("*****************************************************");
+					}
+					Initialize_Intro();
+					AreChambersReady();
+					break;					
+		case 73744: //IssueOperatorCommand
+					logn("*****  GOT ProcessStateChanged  *****");
+					VerifySetup(mS6F11Struct.reportList);
+					break;						
+		case 77888: //ProcessStateChanged
+					logn("*****  GOT ProcessStateChanged  *****");
+					GetProcessState(mS6F11Struct.reportList);
+					break;						
+		case 77905: //RC1StateChanged
+					logn("*****  GOT RC1StateChanged  *****");
+					GetRCStatus(1, mS6F11Struct.reportList);
+					break;	
+		case 77906: //RC2StateChanged
+					logn("*****  GOT RC2StateChanged  *****");
+					GetRCStatus(2, mS6F11Struct.reportList);
+					break;						
+		case 77907: //RC3StateChanged
+					logn("*****  GOT RC3StateChanged  *****");
+					GetRCStatus(3, mS6F11Struct.reportList);
+					break;						
+		case 77921: //RC1RecipeStarted
+					logn("*****  GOT RC1RecipeStarted  *****");
+					break;					
+		case 77922: //RC2RecipeStarted
+					logn("*****  GOT RC2RecipeStarted  *****");
+					break;						
+		case 77923: //RC3RecipeStarted
+					logn("*****  GOT RC3RecipeStarted  *****");
+					break;						
+		case 77924: //RC4RecipeStarted
+					logn("*****  GOT RC4RecipeStarted  *****");
+					break;
+		case 94224: //MaterialReceived
+					logn("*****  GOT MaterialReceived  *****");
+					break;					
+		case 94240: //MaterialRemoved
+					logn("*****  GOT MaterialRemoved  *****");
+					ResetMaterialInfo(mS6F11Struct.reportList);					
+					break;
+		case 94256: //MoveInRequest
+					logn("*****  GOT MoveInRequest  *****");
+					SendLoadRequest(mS6F11Struct.reportList);
+					break;						
+		case 94288: //MoveOutRequest
+					logn("*****  GOT MoveOutRequest  *****");
+					break;					
+		case 94304: //MoveOutComplete
+					logn("*****  GOT MoveOutComplete  *****");
+					ResetLoadPort(mS6F11Struct.reportList);
+					break;	
+		case 94368: //CarrierUnclamped
+					logn("*****  GOT CarrierUnclamped  *****");
+					break;
+		case 94416: //CarrierOpened
+					logn("*****  GOT CarrierOpened  *****");
+					break;					
+		case 98320: //ECChange
+					logn("*****  GOT ECChange Completed  *****");
+					VerifyChangedValues(mS6F11Struct.reportList);
+					break;					
+		case 106640: //COSMSCT-1(nostate->Carrier)
+					logn("*****  GOT COSMSCT-1(nostate->Carrier)  *****");
+					SetCarrierID(mS6F11Struct.reportList);
+					break;
+		case 106672: //COSMSCT-3(nostate->WTGFORHOST)	
+					logn("*****  GOT COSMSCT-3(nostate->WTGFORHOST)  *****");
+					SendProceedWithCarrier(mS6F11Struct.reportList);
+					break;
+		case 106752: //COSMSCT-8(WTGFORHOST->IDVEROK)
+					logn("*****  GOT COSMSCT-8(WTGFORHOST->IDVEROK)  *****");
+					//GetLPAndCIDInfo();
+					break;					
+		case 106848: //COSMSCT-14(SLOTMAPNOTREAD->WTGFORHOST)
+					logn("*****  GOT COSMSCT-14(SLOTMAPNOTREAD->WTGFORHOST)  *****");
+					SendProceedWithCarrier(mS6F11Struct.reportList);
+					break;					
+		case 106864: //COSMSCT-15(WTGFORHOST->SLOTMAPVEROK
+					logn("*****  GOT COSMSCT-15(WTGFORHOST->SLOTMAPVEROK  *****");
+					SendCJPJ(mS6F11Struct.reportList);
+					break;	
+		case 106992: //LPCASMSCT-2(NOTASSOCIATED->ASSOCIATED
+					logn("*****  GOT LPCASMSCT-2(NOTASSOCIATED->ASSOCIATED  *****");
+					SetLPAssociationInfo(mS6F11Struct.reportList);
+					break;					
+		case 107008: //LPCASMSCT-3(ASSOCIATED->NOTASSOCIATED)
+					logn("*****  GOT PCASMSCT-3(ASSOCIATED->NOTASSOCIATED)  *****");
+					ResetLoadPort(mS6F11Struct.reportList);
+					break;
+		case 107120: //LPTSMSCT-2(OUTOFSERVICE->INSERVICE)
+					logn("*****  GOT LPTSMSCT-2(OUTOFSERVICE->INSERVICE)  *****");
+					//S3_F17_BindServiceRequest_LP1("LotABC: WaferA, WaferB, WaferC");
+					break;					
+		case 107184: //LPTSMSCT-5(TRANSFERREADY->READYTOLOAD)
+					logn("*****  GOT LPTSMSCT-5(TRANSFERREADY->READYTOLOAD)  *****");
+					// if (!IsString(LP1_CID)){
+						// S3_F17_BindServiceRequest_LP1("LotABC: WaferA, WaferB, WaferC");
+					// }					
+					break;						
+		case 107216: //LPTSMSCT-6(READYTOLOAD->TRANSFERBLOCKED)
+					logn("*****  GOT LPTSMSCT-6(READYTOLOAD->TRANSFERBLOCKED)  *****");
+					break;					
+		case 107248: //LPTSMSCT-8(TRANSFERBLOCKED->READYTOLOAD
+					logn("*****  GOT LPTSMSCT-8(TRANSFERBLOCKED->READYTOLOAD  *****");
+					SendLoadRequest();
+					break;					
+		case 107392: //CarrierLocationChanged
+					logn("*****  GOT CarrierLocationChanged  *****");
+					GetLPAndCIDInfo(mS6F11Struct.reportList);
+					break;
+		case 114736: //CJSMSCT-3(QUEUED->SELECTED)
+					logn("*****  CJSMSCT-3(QUEUED->SELECTED)  *****");
+					CJSelected(mS6F11Struct.reportList);
+					break;						
+		case 114848: //CJSMSCT-10(EXECUTING->COMPLETED
+					logn("*****  GOT CJSMSCT-10(EXECUTING->COMPLETED  *****");
+					break;					
+		case 118800: //SLSMSCT-1(UNOCCUPIED->OCCUPIED)
+					logn("*****  GOT SLSMSCT-1(UNOCCUPIED->OCCUPIED)  *****");
+					break;		
+		case 119040: //SOSMSCT-10(nostate->NEEDSPROCESSING)
+					logn("*****  GOT SOSMSCT-10(nostate->NEEDSPROCESSING)  *****");
+					break;						
+		default:
+					break;
+	}
+	
+	logn("Thinh <- EventHandler()" );	
+}
+
+VerifySetup(ReportList){
+	local mOperatorCommandReport, mOperatorCommand, OperatorCommandList;
+	mOperatorCommandReport 	= Decode(ReportList[1]);
+	OperatorCommandList 	= Decode(mOperatorCommandReport[1]);
+	mOperatorCommand 		= Smart_Decode(OperatorCommandList[0]);
+	//logn("mOperatorCommand: ", mOperatorCommand);
+	if(mOperatorCommand == "SetupStart"){
+		logn("****************************************************");
+		logn("*** Setting up! Please wait until chambers ready ***");
+		logn("****************************************************");	
+		if(GetCount(INTRO) < 1){
+			Initialize_Intro();
+		}		
+	}
+}
+
+CJSelected(ReportList){
+	local i, mCJIDReport, mCtrlJobIDList, mCtrlJobID;
+	mCJIDReport 	= Decode(ReportList[1]);
+	mCtrlJobIDList 	= Decode(mCJIDReport[1]);
+	mCtrlJobID 		= S2_Decode(mCtrlJobIDList[0]);
+	for (i = 0; i < GetCount(INTRO); i = i + 1){
+		;
+	}
+}
+
+SendLoadRequest(ReportList){
+	local i, mMaterialOReport, mPortInfoList, mPortLocID;
+	
+	if(IsEmptyList(ReportList)){
+		for (i = 0; i < GetCount(mValues); i = i + 1){
+			if(INTRO[i].State == "INTRO"){
+				INTRO[i].State = "LOAD";
+				S2_F49_LPLoadRequest_LP(INTRO[i].portid);			
+			}
+		}		
+	}else{
+		mMaterialOReport = Decode(ReportList[1]);
+		mPortInfoList 	 = Decode(mMaterialOReport[1]);
+		mPortLocID		 = S2_Decode(mPortInfoList[0]);
+		
+		if(INTRO[mPortLocID-1].State == "INTRO"){
+			INTRO[mPortLocID-1].State = "LOAD";
+			S2_F49_LPLoadRequest_LP(mPortLocID);
+		}		
+	}
+}
+
+SendCJPJ(ReportList){
+	local mCarrierIDReport, mCarrierIDList, mCarrierID, mPortIDReport, mPortIDList, mPortID;
+	mPortIDReport 	= Decode(reportList[1]); 
+	mPortIDList 	= Decode(mPortIDReport[1]); 
+	mPortID 		= S2_Decode(mPortIDList[0]); 
+	mCarrierIDReport = Decode(reportList[2]); 
+	mCarrierIDList 	= Decode(mCarrierIDReport[1]); 
+	//mCarrierID		= S2_Decode(mCarrierIDList[0]);
+	
+	INTRO[mPortID-1].carrierid = S2_Decode(mCarrierIDList[0]);
+	
+	if(INTRO[mPortID-1].State == "PWC"){
+		logn(">>>>>  SendCJPJ  <<<<<");	
+		INTRO[mPortID-1].State = "RUN";
+		if(INTRO[mPortID-1].pjCmd == "S16F11"){
+			S16_F11_PRJobCreateEnhRequest(INTRO[mPortID-1]);
+		}else if(INTRO[mPortID-1].pjCmd == "S16F15"){
+			S16_F15_ProcessJobMultiCreateRequest(INTRO[mPortID-1]);
+			//S16F16_Parser(wait(SendPrimary(SEND_S16F15)));
+		}		
+		wait( NewTimer( 1 ) );	//sleep for 1 sec
+		S14_F9_CreateCJobObjectRequest(INTRO[mPortID-1]);
+		//S14F10_Parser(wait(SendPrimary(SEND_S14F9)));		
+	}	
+}
+
+SendProceedWithCarrier(ReportList){
+	local mCarrierIDReport, mCarrierIDList, mPortIDReport, mPortIDList, mPortID;
+	logn(">>>>>  SendProceedWithCarrier  <<<<<");
+	mPortIDReport 	= Decode(reportList[1]); 
+	mPortIDList 	= Decode(mPortIDReport[1]); 
+	mPortID 		= S2_Decode(mPortIDList[0]); 
+	mCarrierIDReport = Decode(reportList[2]); 
+	mCarrierIDList 	= Decode(mCarrierIDReport[1]); 
+	CID				= S2_Decode(mCarrierIDList[0]);
+	
+	if(INTRO[mPortID-1].State == "INTRO" || INTRO[mPortID-1].State == "LOAD" || INTRO[AtoI(CID)-1].State == "PWC"){
+		S3_F17_CarrierActionRequest("ProceedWithCarrier", CID, mPortID);
+		INTRO[AtoI(CID)-1].State = "PWC";
+	}	
+}
+
+ResetMaterialInfo(ReportList){
+	local mMaterialOReport, mPortLocID, mPortCarrierID, mPortInfoList;
+	logn(">>>>>  ResetMaterialInfo  <<<<<");
+	mMaterialOReport 	= Decode(ReportList[1]);
+	mPortInfoList 		= Decode(mMaterialOReport[1]);
+	mPortLocID 			= S2_Decode(mPortInfoList[0]);
+	mPortCarrierID 		= S2_Decode(mPortInfoList[1]);
+
+	if(INTRO[mPortLocID-1].State == "INTRO"){
+		INTRO[mPortLocID-1].State = "LOAD";
+		INTRO[mPortLocID-1].carrierid = mPortCarrierID;
+		S2_F49_LPLoadRequest_LP(mPortLocID);
+	}
+}
+
+VerifyAndUpdateLeakCheckSettings(){
+	local i, mSecsEcIdList, mS2F14_Reply, mValues, mECIDsSetting;
+	logn(">>>>>  VerifyAndUpdateLeakCheckSettings  <<<<<");
+	mSecsEcIdList = NewList (S2_U4(17635121), 
+						S2_U4(17635122), 
+						S2_U4(17635123), 
+						S2_U4(17635124), 
+						S2_U4(17635137), 
+						S2_U4(17635138), 
+						S2_U4(17635139), 
+						S2_U4(17635140), 
+						S2_U4(1763153), 
+						S2_U4(1763154), 
+						S2_U4(1763155), 
+						S2_U4(1763156), 
+						S2_U4(1763157), 
+						S2_U4(1763169), 
+						S2_U4(1763170), 
+						S2_U4(1763171), 
+						S2_U4(1763172), 
+						S2_U4(1763173));
+	mS2F14_Reply	= S2F13_Request(mSecsEcIdList);	
+	mValues			= S2F14_Parser(mS2F14_Reply);
+	mECIDsSetting	= NewList();
+	for (i = 0; i < GetCount(mValues); i = i + 1){
+		if (mValues[i] > 10 ){
+			mECIDsSetting = InsertFirst(S2_L(mSecsEcIdList[i], S2_U2(10)), mECIDsSetting);			
+		}
+	}	
+	If(!IsEmptyList(mECIDsSetting)){
+		mS2F16_Reply = S2F15_Request(mECIDsSetting);	
+		S2F16_Parser(mS2F16_Reply);			
+	}
+}
+
+GetLPAndCIDInfo(ReportList){
+	local mCarrierIDReport, mCarrierIDList, mCarrierID, mLocationIDReport, mLocationIDList, mLocationID;
+	logn(">>>>>  GetLPAndCIDInfo  <<<<<");
+	mCarrierIDReport	= Decode(ReportList[1]);
+	mCarrierIDList		= Decode(mCarrierIDReport[1]);
+	mCarrierID			= S2_Decode(mCarrierIDList[0]);	
+	mLocationIDReport	= Decode(ReportList[2]);
+	mLocationIDList		= Decode(mLocationIDReport[1]);
+	mLocationID			= S2_Decode(mLocationIDList[0]);	
+	switch(mLocationID){
+		case "LP1": INTRO[0].portid = 1; INTRO[0].carrierid	= mCarrierID; break;
+		case "LP2": INTRO[1].portid = 1; INTRO[1].carrierid	= mCarrierID; break;
+		case "LP3": INTRO[2].portid = 1; INTRO[2].carrierid	= mCarrierID; break;
+		case "LP4": INTRO[3].portid = 1; INTRO[3].carrierid	= mCarrierID; break;
+	}
+}
+
+ResetLoadPort(ReportList){
+	local mMaterialOReport, mPortIdList, mPortID;
+	logn(">>>>>  ResetLoadPort  <<<<<");
+	mMaterialOReport 	= Decode(ReportList[1]);
+	mPortIdList 		= Decode(mMaterialOReport[1]);
+	mPortId 			= S2_Decode(mPortIdList[0]);
+	logn("mPortId: ", mPortId);
+	INTRO[mPortID-1].portid = mPortID;
+}
+
+VerifyChangedValues(ReportList){
+	local mPortIDReport, mPortIdList, mECChangeReport, mECChangeData, mOldData, mNewData, mECID;
+	logn(">>>>>  VerifyChangedValues  <<<<<");
+	if(TOOLTYPE == "ALD"){
+		mPortIDReport 	= Decode(ReportList[1]);
+		mPortIdList 	= Decode(mPortIDReport[1]);
+		mECID 			= S2_Decode(mPortIdList[0]);
+		ECChangeData 	= Decode(mPortIdList[1]);
+		mOldData 		= S2_Decode(ECChangeData[0]);	
+		mNewData 		= S2_Decode(ECChangeData[1]);
+		logn("*****  ECID:", ToASCII(mECID), " value has changed from: ", ToASCII(mOldData), " -> ", ToASCII(mNewData));
+	}
+}
+
+SetLPAssociationInfo(ReportList){
+	local mPortIDReport, mPortIdList, mPortId, mCarrierIDReport, mCarrierIDList, mCarrierID;
+	logn(">>>>>  SetLPAssociationInfo  <<<<<");
+	mPortIDReport 	= Decode(ReportList[1]);
+	mPortIdList 	= Decode(mPortIDReport[1]);
+	mPortId 		= S2_Decode(mPortIdList[0]);
+
+	mCarrierIDReport = Decode(ReportList[2]);
+	mCarrierIDList 	 = Decode(mPortIDReport[1]);
+	mCarrierID 		 = S2_Decode(mPortIdList[0]);	
+	if(!mCarrierID){
+		mCarrierID = "1";
+	}
+	//logn("mPortId: ", mPortId);
+	INTRO[mPortID-1].portid 	= mPortID;
+	INTRO[mPortID-1].carrierid	= mCarrierID;
+}
+
+SetCarrierID(ReportList){
+	local mCarrierID, mCarrierIDList, mCarrierIDReport; 
+	logn(">>>>>  SetCarrierID  <<<<<");
+	mCarrierIDReport = Decode(ReportList[1]);
+	mCarrierIDList 	 = Decode(mCarrierIDReport[1]);
+	mCarrierID 		 = Smart_Decode(mCarrierIDList[0]);
+	//logn("mCarrierID: ", mCarrierID);
+	if(mCarrierID){
+		INTRO[AtoI(mCarrierID)-1].carrierid = mCarrierID;
+	}
+}
+
+GetRCStatus(RCn, ReportList){
+	local mPreviousRCStateReport, mPreviousRCState, mRCStateReport, mPRCSList, mRCState, mRCSList; 
+	local mRCStateChangeReport, mRCStateChangeRCPPName, mRCSCRCPPNList;
+	//logn(">>>>>> GetRC", RCn, "Status <<<<<<<");
+	mPreviousRCStateReport 	= Decode(ReportList[1]);
+	mPRCSList 				= Decode(mPreviousRCStateReport[1]);
+	mPreviousRCState 		= S2_Decode(mPRCSList[0]);
+	mRCStateReport 			= Decode(ReportList[2]);
+	mRCSList 				= Decode(mRCStateReport[1]);
+	mRCState 				= S2_Decode(mRCSList[0]);
+	mRCStateChangeReport 	= Decode(ReportList[3]);
+	mRCSCRCPPNList 			= Decode(mRCStateChangeReport[1]);
+	mRCStateChangeRCPPName 	= Smart_Decode(mRCSCRCPPNList[0]);
+	if(mPreviousRCState == 4 && mRCState == 6 ){
+		if (mRCStateChangeRCPPName == "RCReady"){
+			logn("*****************************************");
+			logn("******* RC", RCn, " SETUP IS COMPLETE NOW *******");
+			logn("*****************************************");
+		}else{
+			logn("******* RC", RCn, " Finished Recipe: ", mRCStateChangeRCPPName);
+		}
+	}
+}
+
+AreChambersReady(){
+	local mS1F4_Reply, mValues;	
+	logn(">>>>>  Are Chambers Ready ???  <<<<<");	
+	RC1_READY = RC2_READY = RC3_READY = RC4_READY = RC5_READY = 0; 
+	
+	mS1F4_Reply	= S1F3_Request(NewList(S2_U4(33882769), S2_U4(33882770), S2_U4(33882771), S2_U4(33882772), S2_U4(33882773)));
+	mValues		= S1F4_Parser(mS1F4_Reply);
+	
+	if(mValues[0] == 6){
+		RC1_READY = 1;
+	}
+	if(mValues[1] == 6){
+		RC2_READY = 1;
+	}
+	if(mValues[2] == 6){
+		RC3_READY = 1;
+	}
+	if(mValues[3] == 6){
+		RC4_READY = 1;
+	}
+	if(mValues[4] == 6){
+		RC5_READY = 1;
+	}	
+	
+	mS1F4_Reply	= S1F3_Request(NewList(S2_U4(33554689), S2_U4(33554690), S2_U4(33554691), S2_U4(33554692), S2_U4(33554693)));
+	mValues		= S1F4_Parser(mS1F4_Reply);
+	
+	if(mValues[0] == 1){
+		logn("RC1_READY: ", RC1_READY);
+	}
+	if(mValues[1] == 1){
+		logn("RC2_READY: ", RC2_READY);
+	}
+	if(mValues[2] == 1){
+		logn("RC3_READY: ", RC3_READY);
+	}
+	if(mValues[3] == 1){
+		logn("RC4_READY: ", RC4_READY);
+	}
+	if(mValues[4] == 1){
+		logn("RC5_READY: ", RC5_READY);
+	}	
+	
+	if(RC1_READY || RC2_READY || RC3_READY || RC4_READY || RC5_READY){
+		logn("*****************************************************");
+		logn("****** TOOL IS READY FOR LOT INTRODUCTION NOW *******");
+		logn("*****************************************************");		
+	}else{
+		logn("********************************************************");
+		logn("****** TOOL IS NOT READY FOR LOT INTRODUCTION YET ******");
+		logn("********************************************************");			
+	}
+}
+
+public GetProcessState(ReportList){	
+	local mPreviousProcessStateReport, mPreviousProcessState, mPPSList, mProcessStateReport, mProcessState, mPSList;	
+	logn(">>>>>  GetProcessState  <<<<<");	
+	mPreviousProcessStateReport = Decode(ReportList[1]);
+	mPPSList 					= Decode(mPreviousProcessStateReport[1]);
+	mPreviousProcessState 		= S2_Decode(mPPSList[0]);
+	mProcessStateReport 		= Decode(ReportList[2]);
+	mPSList 					= Decode(mProcessStateReport[1]);
+	mProcessState 				= S2_Decode(mPSList[0]);
+	
+	if(mPreviousProcessState == 0 && mProcessState == 1){
+		logn("*****************************************************");
+		logn("******  SETUP IS COMPLETE. TOOL IS READY NOW  *******");
+		logn("*****************************************************");		
+	}else if(mPreviousProcessState == 2 && mProcessState == 1){
+		logn("******************************************************");
+		logn("******  PROCESSING COMPLETED. TOOL IS IDLE NOW *******");
+		logn("******************************************************");		
+	}
+}
+
+VerifyControlState(ControlState){
+	local mStatus;
+	CTRLREMOTE = 0;
+	switch(ControlState){
+		case 1: mStatus = "************  OFFLINE/Equipment OffLine  ************"; 
+				INITIALIZE = 0;
+				//S1_F17_RequestToolOnline();
+				//wait();
+				break;							
+		case 2: mStatus = "**************  OFFLINE/Attempt-ONLINE  *************"; break;
+		case 3: mStatus = "***************  OFFLINE/Host-OFFLINE  **************"; break;
+		case 4: mStatus = "*******************  ONLINE/LOCAL  ******************"; 
+				INITIALIZE = 0;
+				// S1_F67_RequestToolOnlineRemote(); 
+				// wait();
+				break;
+		case 5: mStatus = "******************  ONLINE/REMOTE  ******************"; 
+				VerifyAndUpdateLeakCheckSettings();
+				CTRLREMOTE = 1;
+				S5_F3_EnableAllAlarms();
+				wait( NewTimer( 1 ) );	//sleep for 1 sec
+				S2_F37_EnableAllEvents();
+				wait( NewTimer( 1 ) );	//sleep for 1 sec
+				mValues = S1F4_Parser(S1F3_Request(S2_U4(33890960)));
+				TOTALPORT = mValues[0];		
+				if(GetCount(INTRO) < 1){
+					Initialize_Intro();
+				}
+				break;
+		default: mStatus = "******************  UNKNOWN STATE  ******************"; break;							
+	}	
+	return(mStatus);
+}
+						
+DoYouWantToRunALot(){
+	local mStatus;
+	logn("Thinh -> DoYouWantToRunALot" );	
+	mStatus = GuiMsgBox ("Run A Lot Confirmation!", "Click OK if you want to run a Lot. Click CANCEL if not", 1);
+	
+	if(mStatus == 1){
+		RunLotAtLP1();
+	}else{
+		logn("Terminated per user's request");
+	}		
+}
+/////////////////////////////////////////////////////////////////
+/*
+	This funct is to create specific report
+	
+		<Report Name="E30_GeneralControlStateReport" MapsTo="E30_GeneralControlStateReport" ReportId="-1" > <!-- E30 events -->
+			<VID CD="">952</VID>	<!-- Current Control State -->			
+			<VID CD="">36</VID>		<!-- Previous Control State -->
+			<VID CD="">40</VID>		<!-- GEM Time -->			
+			<VID CD="">28</VID>		<!-- GEM Clock -->
+			<VID CD="">959</VID>	<!-- Model -->										
+			<VID CD="">960</VID>	<!-- SoftRev -->					
+		</Report>
+*/
+/////////////////////////////////////////////////////////////////
+Create_E30_GeneralControlStateReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID952, VID36, VID40, VID28, VID959, VID960;
+	
+	logn("Thinh -> Create_E30_GeneralControlStateReport()" );
+	
+	VID952 	= S2_U1(1);
+	VID36	= S2_U1(1);
+	VID40	= S2_U1(1);
+	VID28	= S2_U1(1);
+	VID959	= S2_U1(1);
+	VID960	= S2_U1(1);
+	
+	switch(myCEID)
+	{
+		case 3:
+			logn("Thinh - CEID_3_GemEquipmentOffline");	
+			break;
+		case 4:
+			logn("Thinh - CEID_4_GemControlStateLocal");	
+			break;	
+		case 5:
+			logn("Thinh - CEID_5_GemControlStateRemote");	
+			break;	
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+		
+    Send_S6F11(myCEID, NewList(VID952, VID36, VID40, VID28, VID959, VID960));
+	
+	logn("Thinh <- Create_E30_GeneralControlStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/*	This funct is to create specific report
+
+		<Report Name="E30_ProcessProgramChangeReport" MapsTo="E30_ProcessProgramChangeReport" ReportId="-1" > <!-- E30 events -->
+			<VID CD="">961</VID>	<!-- PP Change Name -->			
+			<VID CD="">953</VID>	<!-- PP Change Status -->
+			<VID CD="">965</VID>	<!-- SP change Name -->	
+			<VID CD="">967</VID>	<!-- SP change Status -->							
+		</Report>		
+*/
+
+/////////////////////////////////////////////////////////////////
+Create_E30_ProcessProgramChangeReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID961, VID953, VID965, VID967;
+	
+	logn("Thinh -> Create_E30_ProcessProgramChangeReport()" );
+	
+	VID961 	= S2_U1(1);
+	VID953	= S2_U1(1);
+	VID965	= S2_U1(1);
+	VID967	= S2_U1(1);
+	
+	switch(myCEID)
+	{
+		case 1:
+			logn("Thinh - CEID_1_GemPPChangeEvent");	
+			break;
+		case 2:
+			logn("Thinh - CEID_2_GemBadDownloadEvent");	
+			break;	
+		case 9:
+			logn("Thinh - CEID_9_HostJobChangeEvent");	
+			break;	
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID961, VID953, VID965, VID967));
+	
+	logn("Thinh <- Create_E30_ProcessProgramChangeReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E30_EquipmentConstantChangeReport" MapsTo="E30_EquipmentConstantChangeReport" ReportId="-1" > <!-- E30 events -->
+			<VID CD="">604</VID>	<!-- Last Update ECID -->			
+			<VID CD="">605</VID>	<!-- Last Update Old Value -->
+			<VID CD="">606</VID>	<!-- Last Update New Value -->				
+		</Report>
+*/
+/////////////////////////////////////////////////////////////////
+Create_E30_EquipmentConstantChangeReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID604, VID605, VID606;
+	
+	logn("Thinh -> Create_E30_EquipmentConstantChangeReport()" );
+	
+	VID604 = S2_U1(1);
+	VID605 = S2_A("");
+	VID606 = S2_A("");
+	
+	switch(myCEID)
+	{
+		case 00:
+			logn("Thinh - NA");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID604, VID605, VID606));
+	
+	logn("Thinh <- Create_E30_EquipmentConstantChangeReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E30_RemoteCommandReport" MapsTo="E30_RemoteCommandReport" ReportId="-1" > <!-- E30 events -->
+			<VID CD="">22</VID>	<!-- Current Abort Level Setting -->			
+			<VID CD="">35</VID>	<!-- Previous issued command -->
+		</Report>	
+*/
+/////////////////////////////////////////////////////////////////
+Create_E30_RemoteCommandReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID22, VID35;
+	
+	logn("Thinh -> Create_E30_RemoteCommandReport()" );
+	
+	VID22 = S2_U1(1);
+	VID35 = S2_U1(1);
+	
+	switch(myCEID)
+	{
+		case 12:
+			logn("Thinh - CEID_12_GemOperatorCommandIssued");	
+			break;
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID22, VID35));
+	
+	logn("Thinh <- Create_E30_RemoteCommandReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E30_MaterialReceivedReport" MapsTo="MaterialReceivedReport" ReportId="-1" > <!-- E30 events -->
+			<VID CD="">1500</VID>	<!-- PortID -->		
+			<VID CD="">1680</VID>	<!-- E90LotID -->
+		</Report>		
+*/
+/////////////////////////////////////////////////////////////////
+Create_E30_MaterialReceivedReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID1500, VID1680;
+
+	logn("Thinh -> Create_E30_MaterialReceivedReport()" );
+	
+	VID1500 = S2_U1(INTRO[myIndex].portid); 
+	VID1680 = S2_A(INTRO[myIndex].lotid);
+	
+	switch(myCEID)
+	{
+		case 14:
+			logn("Thinh - CEID_14_GemMaterialReceived");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID1500, VID1680));
+	
+	logn("Thinh <- Create_E30_MaterialReceivedReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E30_SpecificControlStateReport" MapsTo="E30_SpecificControlStateReport" ReportId="-1" > <!-- E30 events -->
+			<VID CD="">1500</VID>	<!-- PortID -->		
+			<VID CD="">1680</VID>	<!-- E90LotID -->
+			<VID CD="">1683</VID>	<!-- Substrate ID -->		
+		</Report>		
+*/
+/////////////////////////////////////////////////////////////////
+Create_E30_SpecificControlStateReport(myCEID, myIndex, mySlotID)
+{
+	local myReportID, myEvent, mySubStrateID, VID1500, VID2680, VID1683;
+	
+	logn("Thinh -> Create_E30_SpecificControlStateReport()" );
+	
+    if (mySlotID > 0 && mySlotID <26)
+    {
+        if ( mySlotID < 10)
+            mySubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(mySlotID));
+        else
+            mySubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(mySlotID));  
+                
+        logn("Thinh - mySubStrateID = ", mySubStrateID );           
+    }
+
+	VID1500 = S2_U1(INTRO[myIndex].portid);
+	VID2680 = S2_A("");
+	VID1683 = S2_A(mySubStrateID);
+	
+	switch(myCEID)
+	{
+		case 15:
+			logn("Thinh - CEID_15_GemMaterialRemoved");	
+			VID2680 = S2_A("");
+			VID1683 = S2_A("");			
+			break;
+		case 17:
+			logn("Thinh - CEID_17_GemSequenceProgramSelected");	
+			break;	
+		case 25:
+			logn("Thinh - CEID_25_GemLotProcessStarted");	
+			break;
+		case 26:
+			logn("Thinh - CEID_26_GemLotProcessCompleted");	
+			break;
+		case 30:
+			logn("Thinh - CEID_30_GemOperatorUpdatedEventConfig");	
+			break;
+		case 31:
+			logn("Thinh - CEID_31_GemOperatorUpdatedAlarmConfig");	
+			break;
+		case 33:
+			logn("Thinh - CEID_33_GemGP_Maintenance");	
+			break;
+		case 34:
+			logn("Thinh - CEID_34_GemGP_Normal");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID1500, VID2680, VID1683));
+	
+	logn("Thinh <- Create_E30_SpecificControlStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E30_EquipmentProcessStateReport" MapsTo="E30_EquipmentProcessStateReport" ReportId="-1" > <!-- E30 events -->
+			<VID CD="">34</VID>		<!-- Previous CEID -->	
+			<VID CD="">955</VID>	<!-- Current Process State -->			
+			<VID CD="">954</VID>	<!-- Previous Process State -->	
+		</Report>	
+*/
+/////////////////////////////////////////////////////////////////
+Create_E30_EquipmentProcessStateReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID34, VID955, VID954;
+	
+	logn("Thinh -> Create_E30_EquipmentProcessStateReport()" );
+	
+	VID34	= S2_U1(1);
+	VID955	= S2_U1(1);
+	VID954	= S2_U1(1);
+	
+	switch(myCEID)
+	{
+		case 3010102:
+			logn("Thinh - CEID_3010102_AutomaticToStopped");	
+			break;		
+		case 3010203:
+			logn("Thinh - CEID_3010203_ManualToAutomatic");	
+			break;		
+		case 3010302:
+			logn("Thinh - CEID_3010302_AutomaticToManual");	
+			break;		
+		case 3010303:
+			logn("Thinh - CEID_3010303_AutomaticToAutomatic");	
+			break;		
+		case 3010304:
+			logn("Thinh - CEID_3010304_AutomaticToReady");	
+			break;		
+		case 3010306:
+			logn("Thinh - CEID_3010306_AutomaticToStopped");	
+			break;		
+		case 3010402:
+			logn("Thinh - CEID_3010402_ReadyToManual");	
+			break;			
+		case 3010405:
+			logn("Thinh - CEID_3010405_ReadyToRunning");	
+			break;	
+		case 3010502:
+			logn("Thinh - CEID_3010502_RunningToManual");	
+			break;	
+		case 3010506:
+			logn("Thinh - CEID_3010506_RunningToStopped");	
+			break;			
+		case 3010507:
+			logn("Thinh - CEID_3010507_RunningToIdle");	
+			break;			
+		case 3010508:
+			logn("Thinh - CEID_3010508_RunningToNotProcessing");	
+			break;			
+		case 3010602:
+			logn("Thinh - CEID_3010602_StoppedToManual");	
+			break;			
+		case 3010605:
+			logn("Thinh - CEID_3010605_StoppedToRunning");	
+			break;			
+		case 3010607:
+			logn("Thinh - CEID_3010607_StoppedToIdle");	
+			break;			
+		case 3010702:
+			logn("Thinh - CEID_3010702_IdleToManual");	
+			break;			
+		case 3010705:
+			logn("Thinh - CEID_3010705_IdleToRunning");	
+			break;	
+		case 3010706:
+			logn("Thinh - CEID_3010706_IdleToStopped");	
+			break;	
+		case 3010802:
+			logn("Thinh - CEID_3010802_NotProcessingToManual");	
+			break;	
+		case 3010805:
+			logn("Thinh - CEID_3010805_NotProcessingToRunning");	
+			break;	
+		case 3010806:
+			logn("Thinh - CEID_3010806_NotProcessingToStopped");	
+			break;				
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID34, VID955, VID954));
+	
+	logn("Thinh <- Create_E30_EquipmentProcessStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_GenProcessingStatusReport" MapsTo="E87_GenProcessingStatusReport" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">2300540100</VID>	<!-- CassetteA State -->
+			<VID CD="">2300540200</VID>	<!-- CassetteB State -->
+			<VID CD="">2300550100</VID>	<!-- CassetteA Process State -->
+			<VID CD="">2300550200</VID>	<!-- CassetteB Process State -->
+		</Report>
+*/
+/////////////////////////////////////////////////////////////////
+Create_E87_GenProcessingStatusReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID2300540100, VID2300540200, VID2300550100, VID2300550200;
+	
+	logn("Thinh -> Create_E87_GenProcessingStatusReport()" );
+	
+	VID2300540100 = S2_U1(1);
+	VID2300540200 = S2_U1(1);
+	VID2300550100 = S2_U1(1);
+	VID2300550200 = S2_U1(1);
+	
+	switch(myCEID)
+	{
+		case 1502050000:
+			logn("Thinh - CEID_1502050000_ProcessingStarted");	
+			break;
+		case 1502060000:
+			logn("Thinh - CEID_1502060000_ProcessingCompleted");	
+			break;	
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID2300540100, VID2300540200, VID2300550100, VID2300550200));
+	
+	logn("Thinh <- Create_E87_GenProcessingStatusReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_FOUPA_WaferStartReport" MapsTo="E87_FOUPA_WaferStartReport" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">2300620100</VID>	<!-- CassetteA Wafer Source Lot ID -->
+			<VID CD="">2300630100</VID>	<!-- CassetteA Wafer Source Sequence ID -->
+			<VID CD="">2300640100</VID>	<!-- CassetteA Wafer Source Port ID -->
+			<VID CD="">2300650100</VID>	<!-- CassetteA Wafer Source Slot ID -->		
+		</Report>	
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E87_FOUPA_WaferStartReport(myCEID, myIndex, mySlotID)
+{
+	local myReportID, myEvent, VID2300620100, VID2300630100, VID2300640100, VID2300650100;
+	
+	logn("Thinh -> Create_E87_FOUPA_WaferStartReport()" );
+
+	VID2300620100 = S2_A(INTRO[myIndex].pjid);
+	VID2300630100 = S2_A(INTRO[myIndex].recipe);
+	VID2300640100 = S2_U4(INTRO[myIndex].portid);
+	VID2300650100 = S2_U4(mySlotID);
+	
+	switch(myCEID)
+	{
+		case 1502890100:
+			logn("Thinh - CEID_1502890100_PodAWaferProcessingStarted");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID2300620100, VID2300630100, VID2300640100, VID2300650100));
+	
+	logn("Thinh <- Create_E87_FOUPA_WaferStartReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_FOUPA_WaferCompleteReport" MapsTo="E87_FOUPA_WaferCompleteReport" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">2300660100</VID>	<!-- CassetteA Wafer Dst Lot Id -->
+			<VID CD="">2300670100</VID>	<!-- CassetteA Wafer Dst Sequence Id -->
+			<VID CD="">2300680100</VID>	<!-- CassetteA Wafer Dst Port Id -->
+			<VID CD="">2300690100</VID>	<!-- CassetteA Wafer Dst Slot Id -->		
+		</Report>
+*/
+/////////////////////////////////////////////////////////////////
+Create_E87_FOUPA_WaferCompleteReport(myCEID, myIndex, mySlotID)
+{
+	local myReportID, myEvent, VID2300660100, VID2300670100, VID2300680100, VID2300690100;
+	
+	logn("Thinh -> Create_E87_FOUPA_WaferCompleteReport()" );
+
+	VID2300660100 = S2_A(INTRO[myIndex].pjid);
+	VID2300670100 = S2_A(INTRO[myIndex].recipe);
+	VID2300680100 = S2_U4(INTRO[myIndex].portid);
+	VID2300690100 = S2_U4(mySlotID);
+		
+	switch(myCEID)
+	{
+		case 1502900100:
+			logn("Thinh - CEID_1502900100_PodAWaferProcessingCompleted");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+	
+	Send_S6F11(myCEID, NewList(VID2300660100, VID2300670100, VID2300680100, VID2300690100));
+	
+	logn("Thinh <- Create_E87_FOUPA_WaferCompleteReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_FOUPB_WaferStartReport" MapsTo="E87_FOUPB_WaferStartReport" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">2300620200</VID>	<!-- CassetteB Wafer Source Lot ID -->
+			<VID CD="">2300630200</VID>	<!-- CassetteB Wafer Source Sequence ID -->
+			<VID CD="">2300640200</VID>	<!-- CassetteB Wafer Source Port ID -->
+			<VID CD="">2300650200</VID>	<!-- CassetteB Wafer Source Slot ID -->		
+		</Report>	
+*/
+/////////////////////////////////////////////////////////////////
+Create_E87_FOUPB_WaferStartReport(myCEID, myIndex, mySlotID)
+{
+	local myReportID, myEvent, VID2300620200, VID2300630200, VID2300640200, VID2300650200;
+	
+	logn("Thinh -> Create_E87_FOUPB_WaferStartReport()" );
+
+	VID2300620200 = S2_A(INTRO[myIndex].pjid);
+	VID2300630200 = S2_A(INTRO[myIndex].recipe);
+	VID2300640200 = S2_U4(INTRO[myIndex].portid);
+	VID2300650200 = S2_U4(mySlotID);
+	
+	switch(myCEID)
+	{
+		case 1502890200:
+			logn("Thinh - CEID_1502890200_PodBWaferProcessingStarted");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID2300620200, VID2300630200, VID2300640200, VID2300650200));
+	
+	logn("Thinh <- Create_E87_FOUPB_WaferStartReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_FOUPB_WaferCompleteReport" MapsTo="E87_FOUPB_WaferCompleteReport" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">2300660200</VID>	<!-- CassetteB Wafer Dst Lot Id -->
+			<VID CD="">2300670200</VID>	<!-- CassetteB Wafer Dst Sequence Id -->
+			<VID CD="">2300680200</VID>	<!-- CassetteB Wafer Dst Port Id -->
+			<VID CD="">2300690200</VID>	<!-- CassetteB Wafer Dst Slot Id -->		
+		</Report>	
+*/
+/////////////////////////////////////////////////////////////////
+Create_E87_FOUPB_WaferCompleteReport(myCEID, myIndex, mySlotID)
+{
+	local myReportID, myEvent, VID2300660200, VID2300670200, VID2300680200, VID2300690200;
+	
+	logn("Thinh -> Create_E87_FOUPB_WaferCompleteReport()" );
+
+	VID2300660200 = S2_A(INTRO[myIndex].pjid);
+	VID2300670200 = S2_A(INTRO[myIndex].recipe);
+	VID2300680200 = S2_U4(INTRO[myIndex].portid);
+	VID2300690200 = S2_U4(mySlotID);
+	
+	switch(myCEID)
+	{
+		case 1502900200:
+			logn("Thinh - CEID_1502900200_PodBWaferProcessingCompleted");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID2300660200, VID2300670200, VID2300680200, VID2300690200));
+	
+	logn("Thinh <- Create_E87_FOUPB_WaferCompleteReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_CarrierLocationChangeReport" MapsTo="E87_CarrierLocationChangeReport" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">1550</VID>	<!-- CarrierID -->
+			<VID CD="">1570</VID>	<!-- Location ID -->
+			<VID CD="">1589</VID>	<!-- Carrier Location Matrix -->
+		</Report>
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E87_CarrierLocationChangeReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID1550, VID1570, VID1589;
+	
+	logn("Thinh -> Create_E87_CarrierLocationChangeReport()" );
+	
+	VID1550 = S2_U1(1);
+	VID1570 = S2_U1(1);
+	VID1589 = S2_U1(1);
+	
+	switch(myCEID)
+	{
+		case 73:
+			logn("Thinh - CEID_73_CarrierLocationChange");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID1550, VID1570, VID1589));
+	
+	logn("Thinh <- Create_E87_CarrierLocationChangeReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_PortReservationStateReport" MapsTo="E87_PortReservationStateReport" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">1500</VID>	<!-- PortID -->			
+			<VID CD="">1700</VID>	<!-- LP Reserveration State -->
+			<VID CD="">1701</VID>	<!-- LP1 Reserveration State -->
+			<VID CD="">1704</VID>	<!-- LP4 Reserveration State -->
+		</Report>
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E87_PortReservationStateReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID1500, VID1700, VID1701, VID1704;
+	
+	logn("Thinh -> Create_E87_PortReservationStateReport()" );
+
+	VID1500 = S2_U1(1);
+	VID1700 = S2_U1(1);
+	VID1701 = S2_U1(1);
+	VID1704 = S2_U1(1);
+		
+	switch(myCEID)
+	{
+		case 3190001:
+			logn("Thinh - CEID_3190001_NoStateToNotReserved");	
+			break;
+		case 3190102:
+			logn("Thinh - CEID_3190102_NotReservedToReserved");	
+			break;	
+		case 3190201:
+			logn("Thinh - CEID_3190201_ReservedToNotReserved");	
+			break;	
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID1500, VID1700, VID1701, VID1704));
+	
+	logn("Thinh <- Create_E87_PortReservationStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_PortAssociationStateReport" MapsTo="E87_PortAssociationStateReport" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">1500</VID>	<!-- PortID -->			
+			<VID CD="">1520</VID>	<!-- LP Association State -->
+			<VID CD="">1521</VID>	<!-- LP1 Association State -->
+			<VID CD="">1524</VID>	<!-- LP4 Association State -->
+			<VID CD="">1540</VID>	<!-- Port State Info -->			
+		</Report>	
+*/
+/////////////////////////////////////////////////////////////////
+Create_E87_PortAssociationStateReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID1500, VID1520, VID1521, VID1524, VID1540;
+	
+	logn("Thinh -> Create_E87_PortAssociationStateReport()" );
+
+	VID1500 = S2_U1(INTRO[myIndex].portid);	
+	VID1520 = S2_U1(1);
+	VID1521 = S2_U1(1);
+	VID1524 = S2_U1(0);
+	VID1540 = S2_L(NewList ( <U1 1>,<U1 1> ));
+	
+	switch(myCEID)
+	{
+		case 3090001:
+			logn("Thinh - CEID_3090001_NoStateToNotAssociated");	
+			break;
+		case 3090102:
+			logn("Thinh - CEID_3090102_NotAssociatedToAssociated");	
+			break;	
+		case 3090201:
+			logn("Thinh - CEID_3090201_AssociatedToNotAssociated");	
+			VID1520 = S2_U1(1);
+			VID1521 = S2_U1(1);
+			VID1540 = S2_L(NewList ( <U1 0>,<U1 2> ));			
+			break;	
+		case 3090202:
+			logn("Thinh - CEID_3090202_AssociatedToAssociated");	
+			break;	
+		default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID1500, VID1520, VID1521, VID1524, VID1540));
+	
+	logn("Thinh <- Create_E87_PortAssociationStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_PortTransferStateReport" MapsTo="RPTID_LoadPortTransferModelStateChange" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">1500</VID>	<!-- PortID -->			
+			<VID CD="">1530</VID>	<!-- LP Transfer State -->
+		<!--	<VID CD="">1531</VID>	-->	<!-- LP1 Transfer State -->
+		<!--	<VID CD="">1534</VID>	--> <!-- LP4 Transfer State -->
+		<!--	<VID CD="">1540</VID>	-->	<!-- Port State Info -->			
+		</Report>		
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E87_PortTransferStateReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID1500, VID1530;
+	
+	logn("Thinh -> Create_E87_PortTransferStateReport()" );
+
+	VID1500 = S2_U1(INTRO[myIndex].portid);	
+	VID1530 = S2_U1(1);
+	
+	switch(myCEID)
+	{
+		case 3040001:
+			logn("Thinh - CEID_3040001_P1T1ResetToOutofService");
+			break;
+		case 3040002:
+			logn("Thinh - CEID_3040002_P1T1ResetToInService");
+			break;
+		case 3040102:
+			logn("Thinh - CEID_3040102_P1T2OutofServiceToInService");
+			break;
+		case 3040201:
+			logn("Thinh - CEID_3040201_P1T3InServiceToOutofService");
+			break;			
+		case 3040203:
+			logn("Thinh - CEID_3040203_P1T4InServiceToTransferReady");
+			break;
+		case 3040204:
+			logn("Thinh - CEID_3040204_P1T4InServiceToTransferBlocked");
+			break;
+		case 3040305:
+			logn("Thinh - CEID_3040305_P1T5TransferReadyToReadyToLoad");
+			break;
+		case 3040306:
+			logn("Thinh - CEID_3040306_P1T5TransferReadyToReadyToUnLoad");
+			break;
+		case 3040504:
+			logn("Thinh - CEID_3040504_P1T6ReadyToLoadToTransferBlocked");
+			break;	
+		case 3040604:
+			logn("Thinh - CEID_3040604_P1T7ReadyToUnLoadToTransferBlocked");
+			break;
+		case 3040405:
+			logn("Thinh - CEID_3040405_P1T8TransferBlockedToReadyToLoad");
+			VID1530 = S2_U1(2);
+			break;
+		case 3040406:
+			logn("Thinh - CEID_3040406_P1T9TransferBlockedToReadyToUnLoad");
+			VID1530 = S2_U1(3);
+			break;			
+		case 3040403:
+			logn("Thinh - CEID_3040403_P1T10TransferBlockedToTransferReady");
+			break;
+        default:
+            logn("Thinh - Unknown Event");			
+	}
+	
+    Send_S6F11(myCEID, NewList(VID1500, VID1530));
+	
+	logn("Thinh <- Create_E87_PortTransferStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_AccessModeStateReport" MapsTo="RPTID_AccessModeStateChange" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">1500</VID>	<!-- PortID -->			
+			<VID CD="">1510</VID>	<!-- Access Mode of Current LoadPort -->
+			<VID CD="">1511</VID>	<!-- Access Mode of 1st LoadPort -->		
+			<VID CD="">1514</VID>	<!-- Access Mode of 4th LoadPort -->							
+		</Report>
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E87_AccessModeStateReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID1500, VID1510, VID1511, VID1514;
+	
+	logn("Thinh -> Create_E87_AccessModeStateReport()" );
+	
+	VID1500 = S2_U1(INTRO[myIndex].portid);	
+	VID1510 = S2_U1(1);
+	VID1511 = S2_U1(1);
+	VID1514 = S2_U1(1);
+		
+	switch(myCEID)
+	{
+		case 3140001:
+			logn("Thinh - CEID_3140001_NoStateToManual");	
+			break;
+		case 3140002:
+			logn("Thinh - CEID_3140002_NoStateToAuto");	
+			break;	
+		case 3140102:
+			logn("Thinh - CEID_3140102_ManualToAuto");	
+			break;	
+		case 3140201:
+			logn("Thinh - CEID_3140201_AutoToManual");	
+			break;				
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+    Send_S6F11(myCEID, NewList(VID1500, VID1510, VID1511, VID1514));
+	
+	logn("Thinh <- Create_E87_AccessModeStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E87_CarrierTransitionStateReport" MapsTo="RPTID_CarrierStateModelStateChange" ReportId="-1" > <!-- E87 events -->
+			<VID CD="">1500</VID>	<!-- PortID -->		
+			<VID CD="">1550</VID>	<!-- CarrierID -->
+		<!--	<VID CD="">1570</VID>	-->	<!-- LocationID -->			
+		<!--	<VID CD="">1590</VID>	-->	<!-- ReasonCOSM_14 -->
+		<!--	<VID CD="">1593</VID>	-->	<!-- Capacity -->			
+		<!--	<VID CD="">1594</VID>	-->	<!-- Substrate Count -->			
+		<!--	<VID CD="">1595</VID>	-->	<!-- CarrierID Status -->			
+		<!--	<VID CD="">1596</VID>	-->	<!-- Carrier Accessing Status -->
+			<VID CD="">1598</VID> 	<!-- SlotMap-->
+		<!--	<VID CD="">1599</VID>	-->	<!-- SlotMap Status -->			
+		</Report>	
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E87_CarrierTransitionStateReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID1500, VID1550, VID1598;
+	
+	logn("Thinh -> Create_E87_CarrierTransitionStateReport()" );
+	
+	DEFAULTSLOTLIST = NewList();
+	for(i = 0; i < 25; i=i+1)
+	{
+		if ( i < INTRO[myIndex].quantity )
+			DEFAULTSLOTLIST = InsertFirst(<U1 3>,DEFAULTSLOTLIST);
+		else
+			DEFAULTSLOTLIST = InsertFirst(<U1 1>,DEFAULTSLOTLIST);
+	}
+
+	VID1500 = S2_U1(INTRO[myIndex].portid);			
+	VID1550 = S2_A(INTRO[myIndex].carrierid);	
+	VID1598 = S2_L(DEFAULTSLOTLIST);	
+		
+	switch(myCEID)
+	{
+		case 3030001:
+			logn("Thinh - CEID_3030001_T1CarrierCreated");	
+			break;
+		case 3030002:
+			logn("Thinh - CEID_3030002_T2CarrierBind");	
+			break;
+		case 3030003:
+			logn("Thinh - CEID_3030003_T3IDReadWFH");	
+			break;
+		case 3030004:
+			logn("Thinh - CEID_3030004_T4InstantiatedPWC");	
+			break;
+		case 3030005:
+			logn("Thinh - CEID_3030005_T5CancelCarrier");	
+			break;
+		case 3030006:
+			logn("Thinh - CEID_3030006_T12SlotMapNotRead");	
+			break;
+		case 3030010:
+			logn("Thinh - CEID_3030010_T17NotAccess");	
+			break;
+		case 3030100:
+			logn("Thinh - CEID_3030100_T21CarrierDestroyed");	
+			break;
+		case 3030203:
+			logn("Thinh - CEID_3030203_T7IDNotReadWFH");	
+			break;
+		case 3030204:
+			logn("Thinh - CEID_3030204_T6CIDverifiedByTool");	
+			break;
+		case 3030304:
+			logn("Thinh - CEID_3030304_T8VerifiedOKPWC");	
+			break;
+		case 3030305:
+			logn("Thinh - CEID_3030305_T9VerifiedFailedCancelCarrier");	
+			break;
+		case 3030607:
+			logn("Thinh - CEID_3030607_T14SlotMapNotReadToWFH");	
+			break;
+		case 3030608:
+			logn("Thinh - CEID_3030608_T13SlotMapVerifiedByTool");	
+			break;
+		case 3030708:
+			logn("Thinh - CEID_3030708_T15SlotMapVerifiedPWC");	
+			break;
+		case 3030709:
+			logn("Thinh - CEID_3030709_T16SlotMapFailedCancelCarrier");	
+			break;
+		case 3031011:
+			logn("Thinh - CEID_3031011_T18InAccess");	
+			break;
+		case 3031112:
+			logn("Thinh - CEID_3031112_T19CarrierComplete");	
+			break;
+		case 3031113:
+			logn("Thinh - CEID_3031113_T20CarrierStopped");	
+			break;
+		case 3035203:
+			logn("Thinh - CEID_3035203_T10IDNotReadWFH");	
+			break;
+		case 3035204:	
+			logn("Thinh - CEID_3035204_T11CIDverifiedByHost");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+	
+	Send_S6F11(myCEID, NewList(VID1500, VID1550, VID1598));
+	
+	logn("Thinh <- Create_E87_CarrierTransitionStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E40_PJTransitionStateReport" MapsTo="E40_PJTransitionStateReport" ReportId="-1" >	<!-- E40 events -->
+			<VID CD="">1670</VID>	<!-- ProcessJobID -->
+			<VID CD="">1671</VID>	<!-- PJ State -->	
+			<VID CD="">1733</VID>	<!-- PJ Start Method -->	
+			<VID CD="">1734</VID>	<!-- PJ Recipe Method -->
+			<VID CD="">1735</VID>	<!-- PJ Recipe ID -->			
+			<VID CD="">1880</VID>	<!-- CJID of current PJ -->	
+			<VID CD="">1881</VID>	<!-- CarrierID of current PJ -->													
+		</Report>
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E40_PJTransitionStateReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID1670, VID1671, VID1733, VID1734, VID1735, VID1880, VID1881;
+	
+	logn("Thinh -> Create_E40_PJTransitionStateReport()" );
+	
+	VID1670 = S2_A(INTRO[myIndex].pjid);
+	VID1671 = S2_U1(4);	
+	VID1733 = S2_BOOLEAN(True);	
+	VID1734 = S2_U1(1);	
+	VID1735 = S2_A(INTRO[myIndex].recipe);
+	VID1880 = S2_A(INTRO[myIndex].cjid);
+	VID1881 = S2_A(INTRO[myIndex].carrierid);
+		
+	switch(myCEID)
+	{
+		case 3240001:
+			logn("Thinh - CEID_3240001_T1PJCreated");	
+			break;
+		case 3240100:
+			logn("Thinh - CEID_3240100_T18QueuedToNoState");	
+			break;
+		case 3240102:
+			logn("Thinh - CEID_3240102_T2QueuedToSettingUp");	
+			break;
+		case 3240203:
+			logn("Thinh - CEID_3240203_T3SettingUpToWaitingForStart");	
+			break;
+		case 3240204:
+			logn("Thinh - CEID_3240204_T4SettingUpToProcessing");	
+			break;
+		case 3240304:
+			logn("Thinh - CEID_3240304_T5WaitingForStartToProcessing");	
+			break;
+		case 3240405:
+			logn("Thinh - CEID_3240405_T6ProcessingToProcessComplete");	
+			break;
+		case 3240500:
+			logn("Thinh - CEID_3240500_T7PJDeleted");	
+			break;
+		case 3240608:
+			logn("Thinh - CEID_3240608_T8Pausing");	
+			break;
+		case 3240610:
+			logn("Thinh - CEID_3240610_T13ExecutingToAborting");	
+			break;
+		case 3240611:
+			logn("Thinh - CEID_3240611_T11ExecutingToStopping");	
+			break;
+		case 3240706:
+			logn("Thinh - CEID_3240706_T10Executing");	
+			break;
+		case 3240710:
+			logn("Thinh - CEID_3240710_T15PauseToAborting");	
+			break;
+		case 3240711:
+			logn("Thinh - CEID_3240711_T12PauseToStopping");	
+			break;
+		case 3240809:
+			logn("Thinh - CEID_3240809_T9Paused");	
+			break;
+		case 3241000:
+			logn("Thinh - CEID_3241000_T16AbortingToNoState");	
+			break;
+		case 3241100:
+			logn("Thinh - CEID_3241100_T17StoppingToNoState");	
+			break;
+		case 3241110:	
+			logn("Thinh - CEID_3240610_T14StoppingToAborting");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID1670, VID1671, VID1733, VID1734, VID1735, VID1880, VID1881));
+	
+	logn("Thinh <- Create_E40_PJTransitionStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E94_CJTransitionStateReport" MapsTo="E94_CJTransitionStateReport" ReportId="-1" >	<!-- E94 events -->
+		<!--	<VID CD="">920</VID>	-->	<!-- CJ Queue Available Space -->
+			<VID CD="">1673</VID>	<!-- ControlJob ID -->				
+			<VID CD="">1738</VID>	<!-- CJ State -->			
+			<VID CD="">1747</VID>	<!-- CJ/PJ Status List -->			
+			<VID CD="">1748</VID>	<!-- CJ Start Method -->						
+		</Report>
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E94_CJTransitionStateReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID1673, VID1738, VID1747, VID1748;
+	
+	logn("Thinh -> Create_E94_CJTransitionStateReport()" );
+	
+	VID1673 = S2_A(INTRO[myIndex].cjid);
+	VID1738 = S2_U1(5);	
+	VID1747 = S2_L();
+	VID1748 = S2_BOOLEAN(False);	
+		
+	switch(myCEID)
+	{
+		case 3250001:
+			logn("Thinh - CEID_3250001_T1CJCreated");	
+			break;
+		case 3250100:
+			logn("Thinh - CEID_3250100_T2QueuedToNoState");	
+			break;
+		case 3250103:
+			logn("Thinh - CEID_3250103_T3QueuedToSelected");	
+			break;
+		case 3250207:
+			logn("Thinh - CEID_3250207_T11CJStopped");	
+			break;
+		case 3250301:
+			logn("Thinh - CEID_3250301_T4SelectedToQueued");	
+			break;
+		case 3250304:
+			logn("Thinh - CEID_3250304_T6SelectedToWaitingForStart");	
+			break;
+		case 3250305:
+			logn("Thinh - CEID_3250305_T5SelectedToExecuting");	
+			break;
+		case 3250405:
+			logn("Thinh - CEID_3250405_T7WaitingForStartToExecuting");	
+			break;
+		case 3250506:
+			logn("Thinh - CEID_3250506_T8CJPaused");	
+			break;
+		case 3250507:
+			logn("Thinh - CEID_3250507_T10ExecutingToCompleted");	
+			break;
+		case 3250605:
+			logn("Thinh - CEID_3250605_T9PausedToExecuting");	
+			break;
+		case 3250700:
+			logn("Thinh - CEID_3250700_T13CJDeleted");	
+			break;
+		case 3255207:
+			logn("Thinh - CEID_3255207_T12CJAborted");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID1673, VID1738, VID1747, VID1748));
+	
+	logn("Thinh <- Create_E94_CJTransitionStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E90_SubstrateLocationObjectStateReport" MapsTo="E90_SubstrateLocationObjectStateReport" ReportId="-1" >	<!-- E90 events -->
+			<VID CD="">1683</VID>	<!-- Substrate ID -->			
+			<VID CD="">1684</VID>	<!-- Substrate Location ID -->			
+			<VID CD="">1685</VID>	<!-- Substrate Location State -->					
+			<VID CD="">1750</VID>	<!-- Substrate location object type -->
+		<!--	<VID CD="">1759</VID>	--> <!-- Subst Location SubstID -->		
+		</Report>	
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E90_SubstrateLocationObjectStateReport(myCEID, myIndex)
+{
+	local myReportID, myEvent, VID1683, VID1684, VID1685, VID1750;
+	
+	logn("Thinh -> Create_E90_SubstrateLocationObjectStateReport()" );
+	
+	VID1683 = S2_U1(1);
+	VID1684 = S2_U1(1);
+	VID1685 = S2_U1(1);
+	VID1750 = S2_U1(1);
+		
+	switch(myCEID)
+	{
+		case 3280102:
+			logn("Thinh - CEID_3280102_T1UnoccupiedToOccupied");	
+			break;
+		case 3280201:
+			logn("Thinh - CEID_3280201_T2OccupiedToUnoccupied");	
+			break;	
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID1683, VID1684, VID1685, VID1750));
+	
+	logn("Thinh <- Create_E90_SubstrateLocationObjectStateReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E90_SubstrateTransitionReport" MapsTo="E90_SubstrateTransitionReport" ReportId="-1" >	<!-- E90 events -->
+		<!--	<VID CD="">1680</VID>	--> <!-- E90LotID -->
+		<!--	<VID CD="">1681</VID>	--> <!-- Substrate Destination -->
+			<VID CD="">1683</VID>	<!-- Substrate ID -->			
+			<VID CD="">1684</VID>	<!-- Substrate Location ID -->			
+			<VID CD="">1685</VID>	<!-- Substrate Location State -->					
+			<VID CD="">1687</VID>	<!-- Subst Process State -->
+		<!--	<VID CD="">1688</VID>	--> <!-- Substrate Source -->
+			<VID CD="">1689</VID>	<!-- Substrate State -->
+		<!--	<VID CD="">1691</VID>	--> <!-- Substrate Usage -->
+		<!--	<VID CD="">1759</VID>	--> <!-- Subst Location SubstID -->		
+		</Report>
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E90_SubstrateTransitionReport(myCEID, myIndex, mySlotID)
+{
+	local myReportID, myEvent, mySubStrateID, mySubStrateLocID, VID1683, VID1684, VID1685, VID1687, VID1689;
+	
+	logn("Thinh -> Create_E90_SubstrateTransitionReport()" );
+	
+    if (mySlotID > 0 && mySlotID <26)
+    {
+        if ( mySlotID < 10)
+            mySubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(mySlotID));
+        else
+            mySubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(mySlotID));  
+                
+        logn("Thinh - mySubStrateID = ", mySubStrateID );           
+    }
+	
+	mySubStrateLocID = CatString(INTRO[myIndex].carrierid,toASCII(mySlotID));
+				
+	VID1683 = S2_A(mySubStrateID);
+	VID1684 = S2_A(mySubStrateLocID);
+	VID1685 = S2_U1(1);	
+	VID1687 = S2_U1(1);	
+	VID1689 = S2_U1(1);	
+	
+	switch(myCEID)
+	{
+		case 3260001:
+			logn("Thinh - CEID_3260001_T1NoStateToAtSource");
+			VID1687 = S2_U1(0);	
+			VID1689 = S2_U1(0);				
+			break;
+		case 3260102:
+			logn("Thinh - CEID_3260102_T2AtSourceToAtWork");	
+			break;
+		case 3260201:
+			logn("Thinh - CEID_3260201_T3AtWorkToAtSource");	
+			break;
+		case 3260202:
+			logn("Thinh - CEID_3260202_T4AtWorkToAtWork");	
+			break;
+		case 3260203:
+			logn("Thinh - CEID_3260203_T5AtWorkToAtDestination");	
+			break;
+		case 3260300:
+			logn("Thinh - CEID_3260300_T7AtDestinationToNoState");	
+			break;
+		case 3260301:
+			logn("Thinh - CEID_3260301_T8AtDestinationToAtSource");	
+			break;
+		case 3260302:
+			logn("Thinh - CEID_3260302_T6AtDestinationToAtWork");	
+			break;
+		case 3260400:
+			logn("Thinh - CEID_3260400_T9AnyStateToNoState");	
+			break;
+		case 3270001:
+			logn("Thinh - CEID_3270001_T10NoStateToNeedsProcessing");	
+			break;
+		case 3270102:
+			logn("Thinh - CEID_3270102_T11NeedsProcessingToInProcess");	
+			break;
+		case 3270107:
+			logn("Thinh - CEID_3270107_T14NeedsProcessingToLost");	
+			break;
+		case 3270108:
+			logn("Thinh - CEID_3270108_T14NeedsProcessingToSkipped");	
+			break;
+		case 3270201:
+			logn("Thinh - CEID_3270201_T13InProcessToNeedsProcessing");	
+			break;
+		case 3270203:
+			logn("Thinh - CEID_3270203_T12InProcessToProcessed");	
+			break;
+		case 3270204:
+			logn("Thinh - CEID_3270204_T12InProcessToAborted");	
+			break;
+		case 3270205:
+			logn("Thinh - CEID_3270205_T12InProcessToStopped");	
+			break;
+		case 3270206:
+			logn("Thinh - CEID_3270206_T12InProcessToRejected");	
+			break;
+		case 3270207:
+			logn("Thinh - CEID_3270207_T12InProcessToLost");	
+			break;
+		case 3270208:
+			logn("Thinh - CEID_3270208_T12InProcessToSkipped");	
+			break;
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID1683, VID1684, VID1685, VID1687, VID1689));
+	
+	logn("Thinh <- Create_E90_SubstrateTransitionReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E90_ChamberAProcessStatusReport" MapsTo="E90_ChamberAProcessStatusReport" ReportId="-1" >	<!-- E90 events -->
+			<VID CD="">2300260103</VID>	<!-- Current Recipe Step Number -->
+			<VID CD="">2300240103</VID>	<!-- Current Recipe Name -->			
+			<VID CD="">2300390104</VID>	<!-- Side1 Substrate ID -->	
+			<VID CD="">2300390105</VID>	<!-- Side2 Substrate ID -->			
+			<VID CD="">2348570104</VID>	<!-- Side1 UV Power -->		
+			<VID CD="">2348570105</VID>	<!-- Side2 UV Power -->		
+			<VID CD="">2314180104</VID>	<!-- Side1 Wafer Count -->	
+			<VID CD="">2314180105</VID>	<!-- Side2 Wafer Count -->			
+		</Report>
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E90_ChamberAProcessStatusReport(myCEID, myIndex, myS1Slot, myS2Slot)
+{
+	local myReportID, myEvent, mySequence, myRecipe, pos, myS1SubStrateID, myS2SubStrateID, VID2300240103, VID2300390104, VID2300390105;
+	local VID2350000101, VID2350000121, VID2314180104, VID2314180105, VID2300260103, myRecipeStep;
+	
+	logn("Thinh -> Create_E90_ChamberAProcessStatusReport()" );
+	
+	if ( myS1Slot < 10 )
+		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS1Slot));
+	else
+		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS1Slot));  
+			
+	logn("Thinh - myS1SubStrateID = ", myS1SubStrateID );           
+
+	if ( myS2Slot == "")
+		myS2SubStrateID == "";
+	else if ( myS2Slot < 10 )
+		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS2Slot));
+	else
+		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS2Slot));  
+			
+	logn("Thinh - myS2SubStrateID = ", myS2SubStrateID ); 
+	
+	mySequence 	= INTRO[myIndex].recipe;
+	pos			= FindString(mySequence, "-", 0);
+	myRecipe	= Substring( mySequence, pos.start + 1);
+	myRecipeStep = 3;
+	
+	VID2300260103 = S2_I4(myRecipeStep);	//Recipe Step Number
+	VID2300240103 = S2_A(myRecipe);			//Recipe Name
+	VID2300390104 = S2_A(myS1SubStrateID);	//A_Side1 SubstrateID
+	VID2300390105 = S2_A(myS2SubStrateID);	//A_Side2 SubstrateID
+	VID2350000101 = S2_F8(65.0);			//A_Side1 UV Power
+	VID2350000121 = S2_F8(66.0);			//A_Side2 UV Power
+	VID2314180104 = S2_I4(502);				//A_Side1 Wfr Count
+	VID2314180105 = S2_I4(472);				//A_Side2 Wfr Count
+	
+	switch(myCEID)
+	{
+		case 1502290103:
+			logn("Thinh - CEID_1502290103_ChamberARecipeStepStarted");	
+			break;	
+		case 1502300103:
+			logn("Thinh - CEID_1502300103_ChamberARecipeStepCompleted");	
+			break;				
+		case 1500580103:
+			logn("Thinh - CEID_1500580103_ChamberAProcessStart");	
+			break;
+		case 1500590103:
+			logn("Thinh - CEID_1500590103_ChamberAProcessComplete");	
+			break;	
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID2300260103, VID2300240103, VID2300390104, VID2300390105, VID2350000101, VID2350000121, VID2314180104, VID2314180105));
+	
+	logn("Thinh <- Create_E90_ChamberAProcessStatusReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E90_ChamberBProcessStatusReport" MapsTo="E90_ChamberBProcessStatusReport" ReportId="-1" >	<!-- E90 events -->
+			<VID CD="">2300260203</VID>	<!-- Current Recipe Step Number -->
+			<VID CD="">2300240203</VID>	<!-- Current Recipe Name -->			
+			<VID CD="">2300390204</VID>	<!-- Side1 Substrate ID -->
+			<VID CD="">2300390205</VID>	<!-- Side2 Substrate ID -->		
+			<VID CD="">2348570204</VID>	<!-- Side1 UV Power -->		
+			<VID CD="">2348570205</VID>	<!-- Side2 UV Power -->
+			<VID CD="">2314180204</VID>	<!-- Side1 Wafer Count -->	
+			<VID CD="">2314180205</VID>	<!-- Side2 Wafer Count -->						
+		</Report>
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E90_ChamberBProcessStatusReport(myCEID, myIndex, myS1Slot, myS2Slot)
+{
+	local myReportID, myEvent, mySequence, myRecipe, pos, myS1SubStrateID, myS2SubStrateID, VID2300240203, VID2300390204, VID2300390205;
+	local VID2350000201, VID2350000221, VID2314180204, VID2314180205, VID2300260203, myRecipeStep;
+	
+	logn("Thinh -> Create_E90_ChamberBProcessStatusReport()" );
+
+	if ( myS1Slot < 10 )
+		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS1Slot));
+	else
+		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS1Slot));  
+			
+	logn("Thinh - myS1SubStrateID = ", myS1SubStrateID );           
+
+	if ( myS2Slot == "")
+		myS2SubStrateID == "";
+	else if ( myS2Slot < 10 )
+		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS2Slot));
+	else
+		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS2Slot));  
+			
+	logn("Thinh - myS2SubStrateID = ", myS2SubStrateID ); 
+	
+	mySequence 	= INTRO[myIndex].recipe;
+	pos			= FindString(mySequence, "-", 0);
+	myRecipe	= Substring( mySequence, pos.start + 1);
+	myRecipeStep = 5;
+	
+	VID2300260203 = S2_I4(myRecipeStep);	//Recipe Step Number
+	VID2300240203 = S2_A(myRecipe);			//Recipe Name
+	VID2300390204 = S2_A(myS1SubStrateID);	//B_Side1 SubstrateID
+	VID2300390205 = S2_A(myS2SubStrateID);	//B_Side2 SubstrateID
+	VID2350000201 = S2_F8(75.0);			//B_Side1 UV Power
+	VID2350000221 = S2_F8(76.0);			//B_Side2 UV Power
+	VID2314180204 = S2_I4(2182);			//B_Side1 Wfr Count
+	VID2314180205 = S2_I4(2089);			//B_Side2 Wfr Count
+	
+	switch(myCEID)
+	{
+		case 1502290203:
+			logn("Thinh - CEID_1502290203_ChamberBRecipeStepStarted");	
+			break;	
+		case 1502300203:
+			logn("Thinh - CEID_1502300203_ChamberBRecipeStepCompleted");	
+			break;		
+		case 1500580203:
+			logn("Thinh - CEID_1500580203_ChamberBProcessStart");	
+			break;
+		case 1500590203:
+			logn("Thinh - CEID_1500590203_ChamberBProcessComplete");	
+			break;	
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID2300260203, VID2300240203, VID2300390204, VID2300390205, VID2350000201, VID2350000221, VID2314180204, VID2314180205));
+	
+	logn("Thinh <- Create_E90_ChamberBProcessStatusReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+/* This funct is to create specific report
+
+		<Report Name="E90_ChamberCProcessStatusReport" MapsTo="E90_ChamberCProcessStatusReport" ReportId="-1" >	<!-- E90 events -->
+			<VID CD="">2300260303</VID>	<!-- Current Recipe Step Number -->
+			<VID CD="">2300240303</VID>	<!-- Current Recipe Name -->			
+			<VID CD="">2300390304</VID>	<!-- Side1 Substrate ID -->
+			<VID CD="">2300390305</VID>	<!-- Side2 Substrate ID -->		
+			<VID CD="">2348570304</VID>	<!-- Side1 UV Power -->		
+			<VID CD="">2348570305</VID>	<!-- Side2 UV Power -->		
+			<VID CD="">2314180304</VID>	<!-- Side1 Wafer Count -->	
+			<VID CD="">2314180305</VID>	<!-- Side2 Wafer Count -->			
+		</Report>	
+*/ 
+/////////////////////////////////////////////////////////////////
+Create_E90_ChamberCProcessStatusReport(myCEID, myIndex, myS1Slot, myS2Slot)
+{
+	local myReportID, myEvent, mySequence, myRecipe, pos, myS1SubStrateID, myS2SubStrateID, VID2300240303, VID2300390304, VID2300390305;
+	local VID2350000301, VID2350000321, VID2314180304, VID2314180305, VID2300260303, myRecipeStep;
+	
+	logn("Thinh -> Create_E90_ChamberCProcessStatusReport()" );
+	
+	if ( myS1Slot < 10 )
+		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS1Slot));
+	else
+		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS1Slot));  
+			
+	logn("Thinh - myS1SubStrateID = ", myS1SubStrateID );           
+
+	if ( myS2Slot == "")
+		myS2SubStrateID == "";
+	else if ( myS2Slot < 10 )
+		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS2Slot));
+	else
+		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS2Slot));  
+			
+	logn("Thinh - myS2SubStrateID = ", myS2SubStrateID ); 
+	
+	mySequence 	= INTRO[myIndex].recipe;
+	pos			= FindString(mySequence, "-", 0);
+	myRecipe	= Substring( mySequence, pos.start + 1);
+	myRecipeStep = 7;
+	
+	VID2300260303 = S2_I4(myRecipeStep);	//Recipe Step Number
+	VID2300240303 = S2_A(myRecipe);			//Recipe Name
+	VID2300390304 = S2_A(myS1SubStrateID);	//C_Side1 SubstrateID
+	VID2300390305 = S2_A(myS2SubStrateID);	//C_Side2 SubstrateID
+	VID2350000301 = S2_F8(85.0);			//C_Side1 UV Power
+	VID2350000321 = S2_F8(86.0);			//C_Side2 UV Power
+	VID2314180304 = S2_I4(173);				//C_Side1 Wfr Count
+	VID2314180305 = S2_I4(167);				//C_Side2 Wfr Count
+	
+	switch(myCEID)
+	{
+		case 1502290303:
+			logn("Thinh - CEID_1502290303_ChamberCRecipeStepStarted");	
+			break;	
+		case 1502300303:
+			logn("Thinh - CEID_1502300303_ChamberCRecipeStepCompleted");	
+			break;		
+		case 1500580303:
+			logn("Thinh - CEID_1500580303_ChamberCProcessStart");	
+			break;
+		case 1500590303:
+			logn("Thinh - CEID_1500590303_ChamberCProcessComplete");	
+			break;	
+        default:
+            logn("Thinh - Unknown Event");		
+	}
+
+	Send_S6F11(myCEID, NewList(VID2300260303, VID2300240303, VID2300390304, VID2300390305, VID2350000301, VID2350000321, VID2314180304, VID2314180305));
+	
+	logn("Thinh <- Create_E90_ChamberCProcessStatusReport()" );
+}
+
+/////////////////////////////////////////////////////////////////
+// This funct is to create S6F11 and publish it
+//  
+/////////////////////////////////////////////////////////////////
+Send_S6F11(EventCEID, VIDList)
+{
+	local myRecID, myCEID, myRePortID, myVIDList, myEvent;
+	logn("Thinh -> Send_S6F11(", EventCEID, ")" );
+	
+    RECORDID 			= RECORDID + 1;	
+	myRecID				= S2_U4(RECORDID);
+	myCEID				= S2_U4(EventCEID); 
+	myRePortID			= S2_U4(GetReportID(EventCEID));
+	myVIDList			= S2_L(VIDList);
+	myEvent 			= NewMessage(6, 11, 1);	
+	myEvent.text 		= S2_L(myRecID, myCEID, S2_L(S2_L(myReportID, myVIDList)));
+	
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	SendPrimary( myEvent );
+
+	logn("Thinh <- Send_S6F11(", EventCEID, ")" );	
+}
+
+/////////////////////////////////////////////////////////////////
+// This funct is to get REPORTID for specific CEID
+//  
+/////////////////////////////////////////////////////////////////
+GetReportID(myCEID)
+{
+	local myReportID;
+	
+    for(i = 0; i < GetCount(REPORTCEID); i = i+1)
+    {
+        eachlist 	= REPORTCEID[i];
+        myReportID 	= eachlist[0];
+        
+        //logn("Thinh - myReportID = ", myReportID );
+        
+        for(ii = 1; ii < GetCount(eachlist); ii = ii+1)
+        {
+            if (eachlist[ii] == myCEID)
+            {
+                done = 1;
+                break;
+            }
+            else 
+                done = 0;
+        }
+        if (done == 1)
+            break;
+    }
+	
+	//logn("Thinh - myReportID = ", myReportID );
+	
+	return (myReportID);
+}

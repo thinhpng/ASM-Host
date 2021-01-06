@@ -1,0 +1,1857 @@
+VID (dec),Name,Remarks  
+33554448,ControlState,"Contains the code identifies the current state of the equipment.  When reported related to a control state transition, its value should represent the state current after the transition."
+,,1=OFFLINE/Equipment OFFLINE
+,,2=OFFLINE/Attempt ON-LINE
+,,3=OFFLINE/HOST OFFLINE
+,,4=ON-LINE/LOCAL
+,,5=ON-LINE/REMOTE
+33554464,PreviousControlState,"Contains the code describing previous control state of the equipment, before the most recent control state change."
+,,1=OFFLINE/Equipment OFFLINE
+,,2=OFFLINE/Attempt ON-LINE
+,,3=OFFLINE/HOST OFFLINE
+,,4=ON-LINE/LOCAL
+,,5=ON-LINE/REMOTE
+33554688+x,RCxPresenceState,"RCx, x= 1-5"
+,, 1 = Present
+,, 0 = Not Present
+33554704+x,LPxPresenceState,"LPx, x= 1-4"
+,, 1 = Present
+,, 0 = Not Present
+33554721,CSTGPresenceState,Cooling Unit
+,, 0 = Not in use
+,, 1 = In use
+33619984,LimitsEnabled,VID of the object to be limit-monitored.  
+33685520,SMPn,The current sampling count based on the trace n.
++16 x p,,"xx=01h-04h, p=0-3"
+,,n=1-4
+33685584,TOTSMPn,"The total sampling count from the start to the end, based on the trace n."
++16 x p,,"xx=05h-08h, p=0-3"
+,,"n=1-4 (Trace: 1-4, to TOTSMP1-4. xx=05h;TOTSMP1)"
+33685648,TracesEnablen,VID being applied trace n.
++16 x p,,"xx=09h-0Ch, p=0-3"
+,,"n=1-4 (Trace: 1-4, for TraceVID 1-4. xx=09h:TracesEnable1)"
+33685712,TRIDn,ID of the old trace n.
++16 x p,,"xx=0Dh-10h, p=0-3"
+,,"n=1-4 (Trace: 1-4, for TRID1-4. xx=0Dh;TRID1)"
+33751056,SpoolCountActual,Count of the messages actually contained in the equipment’s spool area.
+33751072,SpoolCountTotal,Count of the total number of primary messages directed to the spool.  
+33751088,SpoolEnabled,The current state indicating whether the spool has been performed or not.
+,,0= disabled
+,,1= enabled
+33751104,SpoolStartTime,The timestamp from the time spooling last became active.
+,,Format: YYYYMMDDhhmmsscc
+,,cc=1/100 second
+33751120,SpoolFullTime,The timestamp from the time the spool last became full.
+,,Format: YYYYMMDDhhmmsscc
+,,cc=1/100 second
+33751136,SpoolState,The current spooling state.
+,,1=SPOOL ACTIVE
+,,2=SPOOL INACTIVE
+,,Valid only upon SpoolEnabled=1.
+33751152,SpoolUnloadSubstate,The current spool-unloading state.
+,,3=PURGE SPOOL
+,,4=TRANSMIT SPOOL
+,,5=NO SPOOL OUTPUT
+,,Valid only upon SpoolState=1.
+33751168,SpoolLoadSubstate,The current state of spool load.
+,,6=SPOOL NOT FULL
+,,7=SPOOL FULL
+,,Valid only upon SpoolState=1.
+33816592,AlarmsEnabled,Contains the list of alarms (ALIDs) enabled for reporting (via Stream 5).
+33816608,AlarmsSet,"Content of this variable is a list of alarms (ALIDs) currently in the UNSAFE (alarm set) state, regardless whether the alarms are enabled for reporting."
+33882144,EventsEnabled,Contains the event list (CEID) valid for reporting (via Stream 6).
+33882160,Clock,The current value of the equipment’s internal clock.
+,,Format: YYYYMMDDhhmmsscc
+,,cc=1/100 second
+33882384,ProcessState,"Contains the code that identifies the current processing state of the equipment.  When reported related to a processing state transition, its value represents the state current after the transition.  "
+,,0=IDLE
+,,1=READY
+,,2=SYSTEM RUN/RUN
+,,3=SYSTEM RUN/PAUSING
+,,4=SYSTEM RUN/PAUSE
+,,5=SYSTEM RUN/STOPPING
+,,6=SYSTEM RUN/ABORTING
+,,7=SYSTEM RUN/TERMINATE
+,,8=SYSTEM END/COMP
+,,9=SYSTEM END/ST-END
+,,10=SYSTEM END/AB-END
+33882400,PreviousProcessState,"The previous processing state of the equipment, before the most recent process state change."
+,,Contents of the data are same as ProcessState.
+33882416,LPnControlState,The current control state of the load port n.
++n,,0=IDLE
+,,1=READY
+,,2=EXECUTING
+,,(n=1-4)
+33882432,FERbtControlState,The current control state of the front end robot.
+,,0=IDLE
+,,1=READY
+,,2=EXECUTING
+,,3=PAUSE
+,,4=TEACH
+33882448,BERbtControlState,The current control state of the back end robot.
+,,0=IDLE
+,,1=READY
+,,2=EXECUTING
+,,3=PAUSE
+,,4=TEACH
+33882464,AlignerControlState,The current control state of the wafer aligner.
+,,0=IDLE
+,,1=READY
+,,2=EXECUTING
+33882480,MetrologyControlState,The current control state of the metrology.
+,,0=IDLE
+,,1=READY
+,,2=EXECUTING
+33882496,LLAlignernControlState,The current control state of the loadlock  Aligner n.
++n,,0=IDLE
+,,1=READY
+,,2=EXECUTING
+,,3=PAUSE
+,,(n=1-2)
+33882528,GVnControlState,The current control state of the gate valve n.
++n,,0=IDLE
+,,1=READY
+,,2=EXECUTING
+,,(n=1-8)
+33882544,GVnSensorState,The current sensor state of the gate valve n.
++n,,0=OPEN
+,,1=CLOSE
+,,2=NO SENS
+,,3=ERROR
+,,255=INITIALSTATE
+,,(n=1-8)
+33882592,LLCnControlState,The current control state of the loadlock n.
++n,,0=IDLE
+,,1=READY
+,,2=EXECUTING
+,,(n=1-2)
+33882608,LLCnPressState,The current pressure state of the loadlock n.
++n,,0=UNKNOWN
+,,1=1ATM
+,,2=TRANSITION
+,,3=VACUUM
+,,(n=1-2)
+33882624,WHCControlState,The current control state of the WHC.
+,,0=IDLE
+,,1=READY
+,,2=EXECUTING
+33882640,WHCPressState,The current pressure state of the WHC.
+,,0=UNKNOWN
+,,1=1ATM
+,,2=TRANSITION
+,,3=VACUUM
+33882768,RCnState,Contains the code that identifies the current control state of reactor n.
++n,,"When reported related to reactor state, its value represents the state current after the transition."
+,,0=SETUP
+,,1=STANDBY
+,,2=IDLE
+,,3=READY
+,,4=PROC RUN/RUN
+,,5=PROC RUN/PAUSE
+,,6=PROC END/END
+,,7=PROC END/ALARM END
+,,8=PROC END/ABORT END
+,,9=PROC END/WAIT
+,,(n=1-4)
+33882784,PreviousRCnState,"The previous control state of the reactor n, before the most recent state change."
++n,,Contents of the data are same as RCnState.
+,,(n=1-4)
+33882800,RCnPressState,The current pressure state of the reactor n.
++n,,0=UNKNOWN
+,,1=1ATM
+,,2=TRANSITION
+,,3=VACUUM
+,,(n=1-4)
+33882816,RCnProRcpName,Name of the process recipe for reactor n that is currently valid.
++n,,(n=1-4)
+33882832,RCnSeqInformation,The current information related to the process sequence of reactor n.
++n,,00h=Other
+,,01h=Pre1
+,,02h=Pre2
+,,03h=Pre3
+,,04h=Pre4
+,,11h=Depo1
+,,12h=Depo2
+,,13h=Depo3
+,,14h=Depo4
+,,21h=Post1
+,,22h=Post2
+,,23h=Post3
+,,24h=Post4
+,,31h=First1
+,,32h=First2
+,,33h=First3
+,,34h=First4
+,,41h=Last1
+,,42h=Last2
+,,43h=Last3
+,,44h=Last4
+,,(n=1-4)
+33882848,RCnStep,Step being performed in reactor n.
++n,,(n=1-4)
+33882864,RCnStepName,Name of the step being performed in reactor n.
++n,,(n=1-4)
+33882880,RCnStepTime,Execution step time of current reactor n.
++n,,Format: hhmmsscc(8)
+,,cc=1/100 seconds
+,,(n=1-4)
+33882896,RCnStepRemainTime,Execution step remain time of current reactor n.
++n,,Format: hhmmsscc(8)
+,,cc=1/100 seconds
+,,(n=1-4)
+33882912,RCnRecipeRemainTime,Execution recipe remain time of current reactor n.
++n,,Format: hhmmsscc(8)
+,,cc=1/100 seconds
+,,(n=1-4)
+33882928,RCnCarrierID,Carrier ID of Execution wafer in current reactor n.
++n,,(n=1-4)
+33890816,WaferLPnInformation,The current information of wafer contained in load port n.
++n,,"Format: wafer port no., wafer slot no."
+,,(for 28 slots based on the format above.)
+,,(n=1-4)
+33890832,WaferLLnInformation,The current information of wafer contained in load lock n.
++n,,"Format: wafer port no., wafer slot no."
+,,(for 2 slots based on the format above.)
+,,(n=1-2)
+33890848,WaferRCnInformation,The current information of the wafer contained in reactor n.
++n,,"Format: wafer port no., wafer slot no."
+,,(n=1-4)
+33890880,WaferCSTGnInformation,The current information of wafer contained in cooling stage n.
++n,,"Format: wafer port no., wafer slot no."
+,,(for 3 slots based on the format above.)
+,,(n=1-2)
+33890896,WaferALNInformation,The current information of wafer contained in wafer aligner.
+,,"Format: wafer port no., wafer slot no."
+33890912,WaferMTRInformation,The current information of wafer contained in metrology.
+,,"Format: wafer port no., wafer slot no."
+33890928,WaferFERbtInformation,The current information of wafer contained in front end robot.
+,,"Format: wafer port no., wafer slot no."
+,,If Single Arm robot: n=2
+,,If Dual Arm robot: n=4
+33890944,WaferBERbtInformation,The current information of wafer contained in back end robot.
+,,"Format: wafer port no., wafer slot no."
+,,If Single Arm robot: n=2
+,,If Dual Arm robot: n=4
+33890960,NumPorts,The number of ports in the equipment.
+33890976,PortLocStateN,Current information related to the load port N.
++n,,FALSE= no cassette
+,,TRUE= cassette present
+,,"(n=1-4, N=1-4)"
+33890992,PortAlarmN,The current alarm condition in load port N.
++n,,"(n=1-4, N=1-4)"
+33891008,PortLocAssignedN,The location of load port N assigned.  
++n,,"(n=1-4, N=1-4)"
+33891024,PortCarrierIDN,ID of carrier N that can be used now.
++n,,"(n=1-4, N=1-4)"
+33891040,PortLoadStateN,The current loading/unloading state of load port N.
++n,,0= unload
+,,1= load
+,,"(n=1-4, N=1-4)"
+33891056,PortLockStateN,"The current state of the load port N, either locked/unlocked."
++n,,0= unlocked
+,,1= locked
+,,"(n=1-4, N=1-4)"
+33891072,LPnWaferState,The current processing state of all wafers contained in carrier on load port n.
++n,,0= no wafer
+,,1= unprocessed
+,,2= processed
+,,(n=1-4)
+33891088,LPnProcessedWaferCount,The count of currently processed wafers contained in carrier on load port n.
++n,,(n=1-4)
+33891104,LPnNoProcessedWaferCount,The count of currently unprocessed wafers contained in carrier on load port n.
++n,,(n=1-4)
+33891120,RecipeFolderList,Recipe folder list.
+,,1 item format: ASCII 16bytes
+33891136,ActiveRecipeFolder_SV,Active recipe folder.
+,,
+33891152,MainteRCnInformation,The current state related to maintenance of reactor n.
++n,,0= normal
+,,1= maintenance
+,,2= engineering
+,,(n=1-4)
+33891168,MainteLLnInformation,The current state related to maintenance of load lock n.
++n,,0= normal
+,,1= maintenance
+,,(n=1-2)
+33891184,MainteLPnInformation,The current state related to maintenance of load port n.  
++n,,0= normal
+,,1= maintenance
+,,(n=1-4)
+33891200,RCnPMMaintenanceState,PM maintenance information of reactor n.
++n,,"If the deposition count exceeds the deposition count limit, the reactor becomes PM maintenance mode."
+,,"At the PM maintenance state, if the deposition count is set below the deposition count limit, PM maintenance state is released."
+,,0=Normal mode
+,,1=PM Maintenance mode
+,,(n=1-4)
+33891216,WHCTMMaintenanceState,TM maintenance information of WHC.
+,,"If the wafer count exceeds the wafer count limit, the WHC becomes TM maintenance mode."
+,,"At the TM maintenance state, if the wafer count is set below the wafer count limit, TM maintenance state is released."
+,,0=Normal mode
+,,1=TM Maintenance mode
+33891232,MainteUIOInformation,The current state related to maintenance of  UIO
+,,0= normal
+,,1= maintenance
+33891296,LPnPresenceSensorState,Present sensor state.
++n,,FALSE= OFF
+,,TRUE= ON
+,,(n=1-4)
+33891312,LPnPlacementSensorState,Placement sensor state.
++n,,FALSE= OFF
+,,TRUE= ON
+,,(n=1-4)
+33891328,RCnDepoCountP_SV,Deposition count P of reactor n.
++16 x p,,Format: count (8)
++n,,Accumulate  time hhhhhmmsscc(11)
+,,Date that count starts YYYYMMDD(8)
+,,Time that count starts hhmmsscc(8)
+,,cc=1/100 second
+,,"xx=40h-53h, p=0-19, P=1-20"
+,,(for Count1-20)
+,,(n=1-4)
+33891648,RCnEtchCountP_SV,Etching count P of reactor n.  
++16 x p,,Format: count (8)
++n,,Accumulate  time hhhhhmmsscc(11)
+,,Date of count start YYYYMMDD(8)
+,,Time of count start hhmmsscc(8)
+,,cc=1/100 second
+,,"xx=54h-67h, p=0-19, P=1-20"
+,,(for Count1-20)
+,,(n=1-4)
+33891968,RCnDepoLimitP_SV,Deposition count limit P and accumulation time limit P of reactor n.
++16 x p,,Format: Count limit: xxxxxx(8)
++n,,Accumulation time limit: hhhhhmmsscc(11)
+,,(cc=1/100 seconds)
+,,"xx=68h-7Bh, p=0-19, P=1-20"
+,,(for Count1-20)
+,,(n=1-4)
+33892288,RCnEtchLimitP_SV,Etching count limit P and accumulation time limit P of reactor n.
++16 x p,,Format: Count limit: xxxxxx(8)
++n,,Accumulation time limit: hhhhhmmsscc(11)
+,,(cc=1/100 seconds)
+,,"xx=7Ch-8Fh, p=0-19, P=1-20"
+,,(for Count1-20)
+,,(n=1-4)
+33892608,RCnMFCpTotalFlowingQuantity_SV,Current MFC (AI) p accumulated gas quantity of reactor n. MFC is mass flow controller. AI is analog input.
++16 x p,,The data that AI is not MFC is 0.
++n,,"xx=90h-CFh, p=0-63"
+,,(for AI0-63. xx=90h;AI0)
+,,(n=1-4)
+34154240,RCnMFCpTotalFlowingQuantity_SV,Current MFC (AI) p accumulated gas quantity of reactor n. MFC is mass flow controller. AI is analog input.
++16 x (pp-64),,The data that AI is not MFC is 0.
++n,,"xx=70h-8Fh, p=64-95"
+,,(for AI64-95. xx=70h;AI64)
+,,(n=1-4)
+33893632,RCnDOpTotalCount_SV,Current DOp accumulated output cycle of reactor n. DO is digital output.
++16 x p,,Range is 0-99999999 cycle.
++n,,"xx=2D0h-32Fh, p=0-95"
+,,(for DO0-95. xx=2D0h;DO0)
+,,(n=1-4)
+34154752,RCnDOpTotalCount_SV,Current DOp accumulated output cycle of reactor n. DO is digital output.
++16 x (pp-96),,Range is 0-99999999 cycle.
++n,,"xx=90h-BFh, p=96-143"
+,,(for DO96-143. xx=90h;DO96)
+,,(n=1-4)
+34973952,RCnDOpTotalCount_SV,Current DOp accumulated output cycle of reactor n. DO is digital output.
++16 x (pp-144),,Range is 0-99999999 cycle.
++n,,"xx=90h-EFh, p=144-239"
+,,(for DO144-239. xx=90h;DO144)
+,,(n=1-4)
+33895168,RCnRFpTotalTime,Current RF accumulated output time of reactor n. RF is high frequency transmitter.
++16 x p,,Range is 0-999999.99 sec.
++n,,"xx=30h-35h, p=0-5"
+,,p=0 RF1 digital output time
+,,p=1 RF1 analog output time
+,,p=2 RF1 digital and analog output time
+,,p=3 RF2 digital output time
+,,p=4 RF2 analog output time
+,,p=5 RF2 digital and analog output time
+,,(n=1-4)
+33895264,RCnThickness_SV,Current accumulated thickness of reactor n.
++n,,(n=1-5)
+,,Range is 0-99999999 nm
+,,or Range is 0-999999990 A
+,,depending on the configured thickness unit.
+33895280,RCnThicknessLimit_SV,Total Film Thickness Limit
++n,,(n=1-5)
+,,Range is 0~99999999 nm
+,,or Range is 0~999999990 A
+,,depending on the configured thickness unit.
+33895424,LLnWaferCountP_SV,Transferred wafer count P of load lock n.
++16 x p,,Format: Count: xxxxxx(8)
++n,,Count starting date: YYYYMMDD(8)
+,,Count starting time: hhmmsscc(8)
+,,cc=1/100 second
+,,"xx=40h-53h, p=0-19, P=1-20"
+,,(for Count1-20)
+,,(n=1-2)
+33895744,LLnWaferLimitP_SV,Transferred wafer count limit P of load lock n.
++16 x p,,Format: Count limit: xxxxxx(8)
++n,,"xx=54h-67h, p=0-19, P=1-20"
+,,(for Count1-20)
+,,(n=1-2)
+33896064,WHCWaferCountP_SV,Transferred wafer count P of WHC.
++16 x p,,Format: Count: xxxxxx(8)
+,,Count starting date: YYYYMMDD(8)
+,,Count starting time: hhmmsscc(8)
+,,cc=1/100 second
+,,"xx=68h-7Bh, p=0-19, P=1-20"
+,,(for Count1-20)
+33896384,WHCWaferLimitP_SV,Transferred wafer count limit P of WHC.
++16 x p,,Format: Count limit: xxxxxx(8)
+,,"xx=7Ch-8Fh, p=0-19, P=1-20"
+,,(for Count1-20)
+33896704,RC?DepositionCount,Deposition count of reactor n from lot start of processing or cleaning execution
++n,,n=Number of Reactor (1-4)
+33896720,RCnCleaningCount,Cleaning count of reactor n from lot start of processing or cleaning execution
++n,,n=Number of Reactor (1-4)
+33900592,RCnPulseTimep_SV,Current actual pulse time of reactor n.
++16 x (p-1),,Format: sssssssss.ccc seconds
++n,,"x=3h-8h, p=1-6"
+,,(n=1-4)
+33900688,RCnPulseTimeTotal_SV,Current accumulated pulse time of reactor n.
++n,,Format: sssssssss.ccc seconds
+,,(n=1-4)
+33900704,RCnPulseCountTotal_SV,Current accumulated count of reactor n.
++n,,Range is 0-999999999 count.
+,,(n=1-4)
+33896736,RCnDOCountp,Current DOp actual ON count of reactor n. DO is digital output.
++16 x (p-1),,Range is 0-99999999 count.
++n,,"xxx=392h -481h, p=1-240"
+,,(for DO0-239. xxx=392h;DO0)
+,,(n=1-4)
+33900800,ProcLLnSlowStartTime,Timestamp of last time Load Lock n started slow pump down
++n,,n=1-2
+,,
+33900816,ProcLLnSlowFinishTime,Timestamp of last time Load Lock n finished slow pump down
++n,,n=1-2
+,,
+33900832,ProcLLnFastStartTime,Timestamp of last time Load Lock n started fast pump down
++n,,n=1-2
+,,
+33900848,ProcLLnFastFinishTime,Timestamp of last time Load Lock n finished fast pump down
++n,,n=1-2
+,,
+33900864,ConfigVersion,Configuration version being used by this tool
+,,
+33900880,LastRCnLeakRate,Leak Rate (in mTorr/min) calculated during last leak check of Reactor Chamber n
++n,,(n=1-4)
+33900896,LastRCnLeakCheckTimeStamp,Time stamp of last leak check for RCn
++n,,(n=1-4)
+33900912,LastLLnLeakRate,Leak Rate (in mTorr/min) calculated during last leak check of Load Lock n
++n,,(n=1-2)
+33900928,LastLLnLeakCheckTimeStamp,Time stamp of last leak check for Load Lock n
++n,,(n=1-2)
+33900944,LastWHCLeakRate,Leak Rate (in mTorr/min) calculated during last leak check of the Wafer Handler Chamber
+,,
+33900960,LastWHCLeakCheckTimeStamp,Time stamp of last WHC leak check
+,,
+33906704,LLDwellFrequency_SV,Load Lock Dwell Frequency
+,,0=Never
+,,1=Job Only
+,,2=Always
+33906720,LLDwellStyle_SV,Load Lock Dwell Style
+,,0=Isolate (RP)
+,,1=Flow-WHC
+,,2=Isolate (Atm)
+,,3=Flow-FE
+33906736,LLDwellTime_SV,Load Lock Dwell time
+,,Range is 0~65535 Min.
+33620000,RCnLimitMax/MinAIpp,The maximum/minimum value of the Alpp limit in reactor n.  
++16 x pp,,"Format: max.6bytes, min. 6bytes"
++n,,The upper/lower limits are determined by the value of the system data.  AI is an analog input value.
+,,"xx=02h-41h, pp=0-63"
+,,(for AI0-63. xx=02h:AI0)
+,,(n=1-4)
+34148352,RCnLimitMax/MinAIpp,The maximum/minimum value of the Alpp limit in reactor n.  
++16 x (pp-64),,"Format: max.6bytes, min. 6bytes"
++n,,The upper/lower limits are determined by the value of the system data.  AI is an analog input value.
+,,"xx=00h-1Fh, pp=64-95"
+,,(for AI64-95. xx=00h:AI64)
+,,(n=1-4)
+33621024,RCnLimitMax/MinTIpp,The maximum/minimum value of the Tlpp limit for the reactor n.  
++16 x pp,,"Format: max. 6bytes, min. 6bytes"
++n,,The upper/lower limits are determined by the value of the system data.  TI is a temperature input value.
+,,"xx=42h-61h, pp=0-31"
+,,(for TI0-TI31. xx=42:TI0)
+,,(n=1-4)
+34673152,RCnLimitMax/MinTIpp,The maximum/minimum value of the Tlpp limit for the reactor n.  
++16 x (pp-32),,"Format: max. 6bytes, min. 6bytes"
++n,,The upper/lower limits are determined by the value of the system data.  TI is a temperature input value.
+,,"xx=20h-3Fh, pp=32-63"
+,,(for TI32-TI63. xx=20h:TI32)
+,,(n=1-4)
+33621536,RCnLimitMax/MinDIpp,The maximum/minimum value of the Dlpp limit for the reactor n.  
++16 x pp,,"Format: max. 6bytes, min. 6bytes"
++n,,The upper/lower limits are determined by the value of the system data.  DI is a digital input value.
+,,"xx=62h-C1h, pp=0-95"
+,,(for DI0-DI95. xx=62:DI0)
+,,(n=1-4)
+34148864,RCnLimitMax/MinDIpp,The maximum/minimum value of the Dlpp limit for the reactor n.  
++16 x (pp-96),,"Format: max. 6bytes, min. 6bytes"
++n,,The upper/lower limits are determined by the value of the system data.  DI is a digital input value.
+,,"xx=20h-4Fh, pp=96-143"
+,,(for DI96-143. xx=20:DI96)
+,,(n=1-4)
+34679040,RCnLimitMax/MinDIpp,The maximum/minimum value of the Dlpp limit for the reactor n.  
++16 x (pp-144),,"Format: max. 6bytes, min. 6bytes"
++n,,The upper/lower limits are determined by the value of the system data.  DI is a digital input value.
+,,"xx=90h-EFh, pp=144-239"
+,,(for DI144-239. xx=90:DI144
+,,(n=1-4)
+33623296,WLLimitMax/MinAIpp,The maximum/minimum value of the Alpp limit for WHC/LL.  
++16 x pp,,"Format: max. 6bytes, min. 6bytes"
+,,The upper/lower limits are determined by the value of the system data.  AI is an analog input value.
+,,"xx=D0h-D3h,pp=0-3"
+,,"?for AI0-3, xx=D0h:AI0?"
+33623552,WLLimitMax/MinAIp,The maximum/minimum value of the Alpp limit for WHC/LL.  
++16 x pp,,"Format: max. 6bytes, min. 6bytes"
+,,The upper/lower limits are determined by the value of the system data.  AI is an analog input value.
+,,"xx= E0h-EBh, pp=0-11,p=4-15"
+,,(pp=0-11 for AI4-15. xx=E0h:AI4)
+33623360,WLLimitMax/MinDIpp,The maximum/minimum value of the Dlpp limit for WHC/LL.
++16 x pp,,"Format: max. 6bytes, min. 6bytes"
+,,The upper/lower limits are determined by the value of the system data.  DI is a digital input value.
+,,"xx=D4h-DDh,pp=0-9"
+,,"?for DI0-9, xx=D4:DI0?"
+33624320,WLLimitMax/MinDIp,The maximum/minimum value of the Dlp limit for WHC/LL.
++16 x pp,,"Format: max. 6bytes, min. 6bytes"
+,,The upper/lower limits are determined by the value of the system data.  DI is a digital input value.
+,,"xxx=110h-1C5h,pp=0-181 ,p=10-191"
+,,"?pp=0-181 for DI10-191, xxx=110:DI10?"
+33623808,WLLimitMax/MinSAIpp,The maximum/minimum value of the Alpp limit for WHC/LL.  
++16 x pp,,"Format: max. 6bytes, min. 6bytes"
+,,The upper/lower limits are determined by the value of the system data.  SAI is a sensor analog input value.
+,,"xxx= 0F0h-10Fh, pp=0-31"
+,,(for SAI0-31. xxx=0F0h:SAI0)
+33883136,RcnAIp,The actual Alp data in current reactor n. Al is an analog input value.
++16 x p,,"xxx=040h-07Fh, p=0-63"
++n,,(for AI0-63. xxx=040h;AI0)
+,,(n=1-4)
+34149632,RcnAIp,The actual Alp data in current reactor n. Al is an analog input value.
++16 x (pp-64),,"xx=50h-6Fh, p=64-95"
++n,,(for AI64-95. xx=50h:AI64)
+,,(n=1-4)
+33884160,RCnAOp,The actual AOp data in current reactor n. AO is an analog output value.
++16 x p,,"xxx=080h-0BFh ,p=0-63"
++n,,(for AO0-63. xxx=080h;AO0)
+,,(n=1-4)
+34150144,RCnAOp,The actual AOp data in current reactor n. AO is an analog output value.
++16 x (pp-64),,"xx=70h-8Fh, p=64-95"
++n,,(for AO64-95. xx=70h;AO64)
+,,(n=1-4)
+33885184,RCnDIp,The current state of actual Dlp in reactor n. DI is a digital input value.
++16 x p,,"xxx=0C0h-11Fh, p=0-95"
++n,,(for DI0-95. xxx=0C0h;DI0)
+,,(n=1-4)
+34150656,RCnDIp,The current state of actual Dlp in reactor n. DI is a digital input value.
++16 x (pp-96),,"xx=90h-BFh, p=96-143"
++n,,(for DI96-143. xx=90h; DI96)
+,,(n=1-4)
+34949376,RCnDIp,The current state of actual Dlp in reactor n. DI is a digital input value.
++16 x (pp-144),,"xx=90h-EFh, p=144-239"
++n,,(for DI144-239. xx=90h; DI144)
+,,(n=1-4)
+33886720,RCnDOp,The current state of actual DOp in reactor n. DO is a digital output value.
++16 x p,,"xxx=120h-17Fh, p=0-95"
++n,,(for DO0-95. xxx=120h;DO0)
+,,(n=1-4)
+34151424,RCnDOp,The current state of actual DOp in reactor n. DO is a digital output value.
++16 x (pp-96),,"xx=C0h-EFh, p=96-143"
++n,,(for DO96-143. xx=C0h; DO96)
+,,(n=1-4)
+34162688,RCnDOp,The current state of actual DOp in reactor n. DO is a digital output value.
++16 x (pp-144),,"xx=80h-DFh, p=144-239"
++n,,(for DO144-239. xx=80h; DO144)
+,,(n=1-4)
+33888256,RCnTIp,The actual Tlp data of reactor n. TI is a temperature input value.  
++16 x p,,"xxx=180h-19Fh, p=0-31"
++n,,(for TI0-31. xxx=180h;TI0)
+,,(n=1-4)
+34939392,RCnTIp,The actual Tlp data of reactor n. TI is a temperature input value.  
++16 x (p-32),,"xx=20h-3Fh, p=32-63"
++n,,(for TI32-63. xx=20h;TI32)
+,,(n=1-4)
+33888768,RCnTOp,The actual TOp data of reactor n. TO is a temperature output value.  
++16 x p,,"xxx=1A0h-1BFh, p=0-31"
++n,,(for TO0-31. xxx=1A0h;TO0)
+,,(n=1-4)
+34943488,RCnTOp,The actual TOp data of reactor n. TO is a temperature output value.  
++16 x (p-32),,"xx=20h-3Fh, p=32-63"
++n,,(for TO32-63. xx=20h;TO32)
+,,(n=1-4)
+33889280,RCnAOpOffset_SV,The AOp offset data in current reactor n. AO is an analog output value.
++16 x p+n,,"xxx=1C0h-1FFh, p=0-63"
+,,(for AO0-63. xxx=1C0h;AO0)
+,,(n=1-4)
+34152192,RCnAOpOffset_SV,The AOp offset data in current reactor n. AO is an analog output value.
++16 x (pp-64),,"xxx=1F0h-20Fh, p=64-95"
++n,,(for AO64-95. xxx=1F0h;AO64)
+,,(n=1-4)
+33896320,RCnSAAOpOffset_SV,The SAAOp offset data in current reactor n. SAAO is a stand alone analog output value.
++16 x p+n,,"xxx=378h-37Fh, p=0-7"
+,,(for SAAO0-7. xxx=378h;SAAO0)
+,,(n=1-4)
+34152704,RCnSAAOpOffset_SV,The SAAOp offset data in current reactor n. SAAO is a stand alone analog output value.
++16 x (pp-8),,"xx=10h-67h, p=8-95"
++n,,(for SAAO8-95. xx=10h;SAAO8)
+,,(n=1-4)
+33890304,RCnTOpOffset_SV,The TOp offset data of reactor n. TO is a temperature output value.
++16 x p+n,,"xxx=200h-21Fh, p=0-31"
+,,(for TO0-31. xxx=200h;TO0)
+,,(n=1-4)
+34963968,RCnTOpOffset_SV,The TOp offset data of reactor n. TO is a temperature output value.
++16 x (p-32)+n,,"xx=20h-3Fh, p=32-63"
+,,(for TO32-63. xx=20h;TO32)
+,,(n=1-4)
+34977792,WHCDOpTotalCount_SV,Total DO actual ON count of WHC
++p,,Range is 0-99999999 count.
+,,"xx=0h -BFh, p=0-191"
+,,(for DO0-191)
+34996240,MessageLanguage_SV,The language of message displayed on MMI.
+,,0=JAPANESE
+,,1=ENGLISH
+34996256,BuzzerFunction_SV,The rumbling function of buzzer.
+,,0=Not Use
+,,1=Use
+34996272,EndBuzzer_SV,The method of rumbling buzzer when auto processing ends.
+,,0=Standard
+,,1=Not Use
+,,2=Manual Mode
+,,3=Local Mode
+,,4=Manual or Local
+34996288,SystemReset_SV,The use of system reset when status is AB-END or ST-END.
+,,0=No Need
+,,1=Need
+34996304,RCReset_SV,The setting of reactor reset execution after process is processed in auto processing.
+,,0=No? Execute
+,,1=Execute
+34996320,WAITRecipe_SV,The setting of wait processing execution when auto processing ends.
+,,0=No? Execute
+,,1=Execute
+34996336,LLPressure_SV,The pressure of load lock when auto processing ends.
+,,0=Keep
+,,1=Vacuum
+,,2=1Atm
+34996352,CarrierStopped_SV,The transition condition to state of CarrierStopped.
+,,0=Terminate
+,,1=No Process
+34996368,PJEngRecipeID_SV,ID character string of PJ Engineer Recipe.
+,,
+34996384,PJMultiCreate_SV,The creation method when two or more PJ is created.
+,,0=Standard
+,,1=Same Time
+34996400,PJSlotCheck_SV,The function to check carrier slot when carrier exists at PJ creation.
+,,0=No Check
+,,1=One Slot
+,,2=All Slot
+34996416,WaferAlignerUse_SV,The function of wafer aligner
+,,0=Not Use
+,,1=Load Only
+,,2=Unload Only
+,,3=Load and Unload
+34996432,InitCapInSetup_SV,Description
+,,0=Not Execute
+,,1=Execute
+34996448,HandOffCap_SV,Description
+,,0=Not Execute
+,,1=Execute
+34996512,ProcessCounter_SV,The method of counting process count.
+,,0=per Recipe
+,,1=per Step
+34996528,PJEngRecipeRC_SV,The setting of RC that the engineering recipe can use.
+,,0=Eng & Normal
+,,1=Eng only
+34996736,CarrierOutTiming_SV,The timing of carrier out.
+,,0=Immediately
+,,1=Wait Cleaning
+,,2=PJ Complete
+34996752,PJCompleteTiming_SV,The timing of PJ complete.
+,,0=Wafer Complete
+,,1=Normal
+34996768,RCMaintenance_SV,The function of reactor enable/disable switching in auto processing.
+,,0=Disable
+,,1=Enable
+,,2=Enable(Revival)
+34996784,RCAbortProcess_SV,The processing method when reactor abort is occurred in auto processing.
+,,0=Auto Pause
+,,1=Maintenance
+34996800,RCNonePJ_SV,The method of processing PJ when there is no reactor which can be processed.
+,,0=Waiting
+,,1=Abort(WaitPJ)
+,,2=Abort(ProcPJ)
+,,3=Abort
+34996816,AbortedCJ_SV,The processing of CJ when system abort and system stop.
+,,0=Run
+,,1=Run&Carrier
+,,2=All CJ
+34996832,CJAbortCondition_SV,The condition of CJAbort.
+,,0=Unrelated to PJ
+,,1=Abort One PJ
+,,2=Abort All PJ
+34996848,PackPostFirstLastOfNextPJ_SV,The method of processing PackPost/First/Last when PJ is continuously processed.
+,,0=Skip
+,,1=Skip First/Last
+,,2=All Execute
+34996864,PackPostContinuousCondition_SV,The continuous condition of PackPost when PJ is continuously processed.
+,,0=Same All Data
+,,1=Same Style
+34996880,RBEndInitialize_SV,The function of robot initialization when auto processing ends.
+,,0=Not Execute
+,,1=Execute
+34996896,ResumeCleaning_SV,The function to execute cleaning at auto resume after all wafer are automatic returned to carrier while auto pauses.
+,,0=Disable
+,,1=Enable
+34996912,PMMaintenance_SV,The processing of reactor when process count limit is exceeded in auto processing.
+,,0=Disable
+,,1=Enable
+34996928,BERBLoadArm_SV,The function to fix arm when wafer is loaded into reactor of dual arm BERB.
+,,0=Not Fixation
+,,1=Fixation
+34996944,LLLoadSlot_SV,Loadlock Load Slot
+,,0=Lower Slot
+,,1=Upper Slot
+34996960,CLUnloadTiming_SV,The unload timing of unload from Cooling stage.
+,,0=Wait wafer
+,,1=Immediately
+34996976,WaferPreTransfer_SV,The function to do preceding transfer of dual arm BERB.
+,,0=Not Execute
+,,1=Execute
+34997248,RCnInitialInterval_SV,The job untreated time when cycle purge of the first time is executed.
++n,,Range is 0~65535 Min.
+,,(n=1-5)
+34997264,RCnRetryInterval_SV,The job untreated time when cycle purge since the second times is executed.
++n,,Range is 0~65535 Min.
+,,(n=1-5)
+34997280,LLnInitialInterval_SV,Load Lock Initial Interval
++n,,Range is 0~65535 Min.
+,,(n=1-3)
+34997296,LLnRetryInterval_SV,Load Lock Retry Interval
++n,,Range is 0~65535 Min.
+,,(n=1-3)
+34997312,LLnCycle_SV,Load Lock Cycle
++n,,Range is 0~65535 Min.
+,,(n=1-3)
+34997760,RCnAutoCleaningTriggerType_SV,The trigger type of Auto Chamber Cleaning of reactor n.
++n,,0=Processing Count
+,,1=Processing Time
+,,2=Thickness
+,,(n=1-5)
+34997776,RCnAutoCleaningCountingPro_SV,The Counting Process of Auto Chamber Cleaning of reactor n.
++n,,0=Main Only
+,,1=Main / First /Last
+,,(n=1-5)
+34997792,RCnAutoCleaningTotalCount_SV,"The Total Processing Count , Time or Thickness of Auto Chamber Cleaning of reactor n."
++n,,"Range is 0~999999999 (times, sec or nm)."
+,,(n=1-5)
+34997808,RCnAutoCleanRcpExeTiming_SV,The Recipe Execution Timing of Auto Chamber Cleaning of reactor n.
++n,,"Range is 0~999999999 (times, sec or nm)."
+,,(n=1-5)
+34997824,RCnAutoLinePurgeTriggerTyp_SV,The trigger type of Auto Gas Line Purge of reactor n.
++n,,0=Processing Count
+,,1=Processing Time
+,,2=Thickness
+,,(n=1-5)
+34997840,RCnAutoLinePurgeCountPro_SV,The Counting Process of Auto Gas Line Purge of reactor n.
++n,,0=Main Only
+,,1=Main / First /Last
+,,(n=1-5)
+34997856,RCnAutoLinePurgeClnTotalCnt_SV,"The Total Processing Count , Time or Thickness of Auto Gas Line Purge of reactor n."
++n,,"Range is 0~999999999 (times, sec or nm)."
+,,(n=1-5)
+34997872,RCnAutoLinePurgeRcpExeTimng_SV,The Recipe Execution Timing of Auto Gas Line Purge of reactor n.
++n,,"Range is 0~999999999 (times, sec or nm)."
+,,(n=1-5)
+34997888,RCnAutoCleanningCascadeMode_SV,Auto Cleanning Cascade Mode
++n,,0=Run after Process Job
+,,1=Run after Water
+,,(n=1-5)
+34997904,RCnAutoLinePurgeCascadeMode_SV,Auto Gas Line Purge Cascade Mode
++n,,0=Run after Process Job
+,,1=Run after Water
+,,(n=1-5)
+34998016,FFUAlarmTotalAlarmCount_SV,Current accumulated FFU alarm count.
+,,Range is 0~999999999 (times).
+34998032,FFUAlarmAutoPauseCountLimit_SV,FFU Alarm count limit for auto pause.
+,,Range is 0~999999999 (times).
+34998048,RCnPSCycleCountLimit_SV,Pulse Cycle Count Limit
++n,,(n=1-5)
+,,Range is 0~999999999 cycle.
+34998064,RCnPSPulseCountLimit_SV,Pulse Count Limit
++n,,(n=1-5)
+,,Range is 0~999999999 cycle.
+34998080,RCnPSPulseTimeLimit_SV,Pulse Time Limit  (in second)
++n,,(n=1-5)
+,,Range is 0 ~999999999.999
+34998096,RCnPSCycleCountCurrent,Current Pulse Cycle Count
++n,,(n=1-5)
+,,Range is 0~999999999 cycle.
+34998112,RCnPSPulseCountCurrent,Current Pulse Count 
++n,,(n=1-5)
+,,Range is 0~999999999 cycle.
+34998128,RCnPSPulseTimeCurrent,Current Pulse Time (in second)
++n,,(n=1-5)
+,,Range is 0 ~999999999.
+34998144,RCnPSCycleCountTotal_SV,Total Pulse Cycle Count 
++n,,(n=1-5)
+,,Range is 0~999999999 cycle.
+34998160,RCnPSPulseCountTotal_SV,Total Pulse Count
++n,,(n=1-5)
+,,Range is 0~999999999 cycle.
+34998176,RCnPSPulseTimeTotal_SV,Total Pulse Time (in second)
++n,,(n=1-5)  
+,,Range is 0 ~999999999.999
+34998272,RCnTOpSetPoint,The TOp default setpoint data of reactor n. TO is a temperature output value.
++16 x p,,"xx=80h-BFh, p=0-63"
++n,,(for TO0~63. xx=80h;TO0)  
+,,(n=1-5)
+34999296,RCnTOpLightAlarmLow_SV,The TOp light alarm low data of reactor n. TO is a temperature output value.
++16 x p,,"xx=C0h-FFh, (p=0-63)"
++n,,(for TO0~63. xx=C0h;TO0)
+,, (n=1-5)
+35000320,RCnTOpLightAlarmHigh_SV,The TOp light alarm high data of reactor n. TO is a temperature output value.
++16 x p,,"xx=00h-3Fh, p=0-63"
++n,,(for TO0~63. xx=00h;TO0)
+,, (n=1-5)
+35001344,RCnTOpSeriousAlarmLow_SV,The TOp serious alarm low data of reactor n. TO is a temperature output value.
++16 x p,,"xx=40h-7Fh, p=0-63"
++n,,(for TO0~63. xx=40h;TO0)
+,, (n=1-5)
+35002368,RCnTOpSeriousAlarmHigh_SV,The TOp serious alarm high data of reactor n. TO is a temperature output value.
++16 x p,,"xx=80h-BFh, p=0-63"
++n,,(for TO0~63. xx=80h;TO0)  
+,,(n=1-5)
+35003392,RCnTOpCheck,The TOp serious alarm high data of reactor n. TO is a temperature output value.
++16 x p,,True= Check
++n,,False= No Check
+,,"xx=C0h-FFh, p=0-63"
+,,(for TO0~63. xx=C0h;TO0)
+,, (n=1-5)
+35004432,TP1Timer_SV,TP1 time-out time value.
+,,Range is 1~999
+35004448,TP2Timer_SV,TP2 time-out time value.
+,,Range is 1~999
+35004464,TP3Timer_SV,TP3 time-out time value.
+,,Range is 1~999
+35004480,TP4Timer_SV,TP4 time-out time value.
+,,Range is 1~999
+35004496,TP5Timer_SV,TP5 time-out time value.
+,,Range is 1~999
+35004512,TP6Timer_SV,TP6 time-out time value.
+,,Range is 1~999
+35004528,TD1Timer_SV,TD1 time-out time value.
+,,Range is 1~999
+35004544,LoadTimer1_SV,Load Timer1 time-out time value.
+,,Range is 0.0~999.9
+35004560,LoadTimer2_SV,Load Timer2 time-out time value.
+,,Range is 0.0~999.9
+35004576,UnloadTimer1_SV,Unload Timer1 time-out time value.
+,,Range is 0.0~999.9
+35004592,UnloadTimer2_SV,Unload Timer2 time-out time value.
+,,Range is 0.0~999.9
+35004608,PreProcessPurgeTime_SV,Pre Process Purge time-out time value.
+,,Range is 0.0~999.9
+35004624,PostProcessPurgeTime_SV,Post Process Purge time-out time value.
+,,Range is 0.0~999.9
+35004640,WaitPurgeOnTime_SV,Wait Purge On time-out time value.
+,,Range is 0.0~999.9
+35004656,WaitPurgeOffTime_SV,Wait Purge Off time-out time value.
+,,Range is 0.0~999.9
+35004672,DefaultPurgeMode_SV,Default Purge Mode
+,,0=Nornal
+,,1=Purge
+35004688,LPnCarrierSettingIDREADER_SV,The IDReader use setting of the load port n.
++n,,0=Not Use
+,,1=Use
+,,(n=1-4)
+35004704,LPnCarrierSettingStyle_SV,The IDReader using style setting of the load port n.
++n,,0=ID Set
+,,1=Use Mes
+,,2=No Mes
+,,(n=1-4)
+35004720,LPnCarrierSettingDefaultID_SV,The default ID when IDReader not using of the load port n.
++n,,(n=1-4)
+35004736,LPnMapVerificaionDialogStyl_SV,The Map Verification Dialog use setting of the load port n.
++n,,0=Use
+,,1=Not Use
+,,(n=1-4)
+35004928,EntrySystemConfiguration,The entry file of System Configuration.
+,,
+35004944,EntryWHCLLConfiguration,The entry file of WHC/Load Lock Configuration.
+,,
+35004992,EntryLoadportConfiguration,The entry file of Loadport Configuration.
+,,
+35004960,EntrySystemParameter,The entry file of System Parameter
+,,
+35004976,EntryTransPatternParameter,The entry file of Transfer Pattern Parameter
+,,
+35005008,EntryLoadportParameter,The entry file of Loadport Parameter
+,,
+35005056,EntryTMConfiguration,The entry file of Transport Module Configuration.
+,,
+35005072,EntryFERobotParameter,The entry file of FE Robot Parameter
+,,
+35005088,EntryBERobotParameter,The entry file of BE Robot Parameter
+,,
+35005120,EntryGasLineConfiguration,The entry file of Gas Line Configuration
+,,
+35005136,EntryGasLineImgFileParameter,The entry file of Gas Line Image File Parameter
+,,
+35005152,EntryTempLineConfiguration,The entry file of Temperature Line Configuration for the TMC
+,,
+35005168,EntryTempLineImgFileParameter,The entry file of Temperature Line Image File Parameter for the TMC
+,,
+35005184,EntryPMCnPMConfiguration,The entry file of PMCn Process Module Configuration.
++n,,(n=1-5)
+35005200,EntryPMCnPMParameter,The entry file of PMCn Process Module Parameter.
++n,,(n=1-5)
+35005216,EntryPMCnComponent,The entry file of PMCn Component.
++n,,(n=1-5)
+35005232,EntryPMCnGasLnConfiguration,The entry file of PMCn Gas Line Configuration.
++n,,(n=1-5)
+35005248,EntryPMCnGasLnImageFile,The entry file of PMCn Gas Line Image File.
++n,,(n=1-5)
+35005408,EntryPMCxTempLnConfiguration,The entry file of Temperature Line Configuration for the PMCn.
++n,,(n=1-5) (x=1-5)
+35005424,EntryPMCxTempLnImageFile,The entry file of Temperature Line Image File Parameter for the PMCn.
++n,,(n=1-5) (x=1-5)
+35005344,EntryPMCnCyclePurgeRecipe,The entry file of PMCn Cycle Purge Recipe.
++n,,(n=1-5)
+35005360,EntryPMCnLeakCheckRecipe,The entry file of PMCn Leak Check Recipe.
++n,,(n=1-5)
+35005376,EntryPMCnChamberCleanRecipe,The entry file of PMCn Chamber Cleaning Recipe.
++n,,(n=1-5)
+35005392,EntryPMCnGasLinePurgeRecipe,The entry file of PMCn Gas Line Purge Recipe.
++n,,(n=1-5)
+35005440,DeviceID,Identifier assigned to the equipment.
+,,Range is 0000h~7FFFh
+35005456,T3Timer,T3Timer(Reply Timeout).
+,,Range is 1-120
+35005472,T5Timer,T5Timer(Connection Separation Timeout).
+,,Range is 1-240
+35005488,T6Timer,T6Timer(Control Transaction Timeout).
+,,Range is 1-240
+35005504,T7Timer,T7Timer(Connection Idle Timeout).
+,,Range is 1-240
+35005520,T8Timer,T8Timer(Network Intercharacter Timeout).
+,,Range is 1-120
+35005536,LinkTestTimer,Link Test Timer. 0 represents that no Link Test has been sent.
+,,Range is 0-60
+35005552,ActivePassive,Connection Mode.
+,,0=Active
+,,1=Passive
+35005696,RCnMFCpTotalFlowingLimit,MFC (AI) p accumulated gas limit of reactor n. MFC is mass flow controller. AI is analog input.
++16 x p,,The data that AI is not MFC is 0.
++n,,"xx=50h-AFh, p=00-95"
+,,(for AI00~95. xx=50h;AI0) 
+,,(n=1-5)
+35007232,RCnDOpTotalLimit,DOp accumulated output cycle of reactor n. DO is digital output.
++16 x p,,Range is 0~99999999 cycle.
++n,,"xxx=2B0h-33Fh, p=0-143"
+,,(for DO0-143. xxx=2B0h;DO0) 
+,,(n=1-5)
+35009536,RCnDOpCurrentCount,DOp current output cycle of reactor n. DO is digital output.
++16 x p,,Range is 0~99999999 cycle.
++n,,"xxx=340h-3CFh, p=0-143"
+,,(for DO0-143. xxx=340h;DO0) 
+,,(n=1-5)
+35012352,LLnSetPress,SetPress value of load lock n.
++n,,(n=1-2)
+35012357,WHCSetPress,SetPress value of WHC.
+,,
+35012368,LLnSetFlow,SetFlow value of load lock n.
++n,,(n=1-2)
+35012373,WHCSetFlow,SetFlow value of WHC.
+,,
+35012384,LLnALIGNSetAngle,SetAngle value of LLnALIGN.
++n,,(n=1-2)
+35012400,LLnALIGNSetOffset,SetOffset value of LLnALIGN.
++n,,(n=1-2)
+35012416,LLnALIGNSetSpeed,SetSpeed value of LLnALIGN.
++n,,(n=1-2)
+35012432,FERbtSetSpeed,SetSpeed value of FE Robot.
+,,
+35012449,BERbtSetSpeedJEL,SetSpeed value of JEL BE Robot.
+,,
+35012592,FerbTeachKHIDLPn,The teaching data for KHID FERBT of load port n.
++16 x n,,Format of one item: 20
+,,(n=1-4)
+,,N=n-1
+35012656,FerbTeachKHIDLLn,The teaching data for KHID FERBT of load lock n.
++16 x n,,Format of one item: 20
+,,(n=1-2)
+,,N=n+3
+35012688,FerbTeachKHIDCSn,The teaching data for KHID FERBT of cooling stage n.
++16 x n,,Format of one item: 20
+,,(n=1-2)
+,,N=n+5
+35012736,FerbTeachKHID metrology,The teaching data for KHID FERBT of metrology.
+,,Format of one item: 20
+35012752,FerbTeachKHIDAlinger,The teaching data for KHID FERBT of aligner.
+,,Format of one item: 20
+35012848,FerbParamKHIDLPn,The parameter data for KHID FERBT of load port n.
++16 x n,,Format of one item: 20
+,,(n=1-4)
+,,N=n-1
+35012912,FerbParamKHIDLLn,The parameter data for KHID FERBT of load lock n.
++16 x n,,Format of one item: 20
+,,(n=1-2)
+,,N=n+3
+35012944,FerbParamKHIDCSn,The parameter data for KHID FERBT of cooling stage n.
++16 x n,,Format of one item: 20
+,,(n=1-2)
+,,N=n+5
+35012992,FerbParamKHID metrology,The parameter data for KHID FERBT of metrology.
+,,Format of one item: 20
+35013008,FerbParamKHIDAlinger,The parameter data for KHID FERBT of aligner.
+,,Format of one item: 20
+35013024,FerbParamKHIDLowOffset,The parameter data for KHID FERBT of lower arm offset.
+,,Format of one item: 20
+35013376,BerbTeachJEL_LLn-n-N,The teachng data for JEL BERBT of load lock.
++16 x M,,Format of one item: 20
++ N,,M means Position of LL.
+,,M=0:LL1-1
+,,M=1:LL1-2
+,,M=2:LL2-1
+,,M=3:LL2-2
+,,N means Position of XEx or YEx.
+,,N=0:XExDown
+,,N=1:XExBase
+,,N=2:XExUp
+,,N=3:YExDown
+,,N=4:YExBase
+,,N=5:YExUp
+35013376,BerbTeachJELRCn-N,The teachng data for JEL BERBT of reactor.
++16 x M,,Format of one item: 20
++ N,,M means Position of RC.
+,,M=4:RC1
+,,M=5:RC2
+,,M=6:RC3
+,,M=7:RC4
+,,M=8:RC5
+,,N means Position of XEx or YEx.
+,,N=0:XExDown
+,,N=1:XExBase
+,,N=2:XExUp
+,,N=3:YExDown
+,,N=4:YExBase
+,,N=5:YExUp
+35013600,BerbSpeedJELSpeedN,The speed data for JEL BERBT.
++N,,Format of one item: 20
+,,N means the data of speed.
+,,N=0:Speed High
+,,N=1:Speed Low
+,,N=2:Acceleration
+,,N=3:Jerk
+35013728,EntryPMCnPreIdleRecipe,The entry file of PMCn Pre Idle Recipe.
++n,,(n=1-5)
+35013744,EntryPMCnPostIdleRecipe,The entry file of PMCn Post Idle Recipe.
++n,,(n=1-5)
+35013632,EntryPMCnHOPrepLoadRecipe,The entry file of Hand Off Prep Load Recipe.
++n,,(n=1-5)
+35013648,EntryPMCxHOPostLoadRecipe,The entry file of PMCn Hand Off Post Load Recipe.
++n,,(n=1-5)
+35013664,EntryPMCnHOPrepUnloadRecipe,The entry file of PMCn Hand Off Prep Unload Recipe.
++n,,(n=1-5)
+35013680,EntryPMCnHOPostUnloadRecipe,The entry file of PMCn Hand Off Post Unload Recipe.
++n,,(n=1-5)
+35021328 +16*p,RCnPSSourcepUseCountLimit_SV,Use Count Limit for Source p
++n,,xx=0x21-2A
+,,p=0-9 
+,,n=1-5
+,,Range is 0~999999999 pulses.
+35021584 +16*p,RCnPSSourcepUseTimeLimit_SV,Use Time Limit for Source p
++n,,xx=0x31-3A
+,,p=0-9
+,,n=1-5     
+,,Range is 0 ~999999999.999
+35021840 +16*p,RCnPSSourcepUseCountTotal_SV,Total Use Count for Source p
++n,,xx=0x41-4A
+,,p=0-9
+,,n=1-5     
+,,Range is 0~999999999 pulses.
+35022096 +16*p,RCnPSSourcepUseTimeTotal_SV,Total Use Time for Source p
++n,,xx=0x51-5A
+,,p=0-9
+,,n=1-5     
+,,Range is 0 ~999999999.999
+35022352 +16*p,RCnPSSourcepUseCountCurrent,Current Use Count for Source p
++n,,xx=0x61-6A
+,,p=0-9
+,,n=1-5     
+,,Range is 0~999999999 pulses.
+35022608 +16*p,RCnPSSourcepUseTimeCurrent,Current Use Time for Source p
++n,,xx=71-7A
+,,p=0-9
+,,n=1-5   
+,,Range is 0 ~999999999.999
+35022848,RCnAnalogPIDpMethod_SV,Analog PID p Method for RC n
++16 x p,,"x=1-4, p=1-4 (There are up to four PID control loops"
++n,,n=1-5
+,,Values are:
+,,"0=P Control,"
+,,"1=I Control,"
+,,"2=D control,"
+,,3=Special
+35023104,RCnAnalogPIDpPValue_SV,Analog PID p P-Value for RC n
++16 x p,,x=0x1-4 p=1-4
++n,,n=1-5
+,,Range is 0~999.999
+35023360,RCnAnalogPIDpIValue_SV,Analog PID p I-Value for RC n
++16 x p,,x=0x1-4 p=1-4
++n,,n=1-5
+,,Range is 0~999.999
+35023632,RCnAnalogPIDpDValue_SV,Analog PID p D-Value for RC n
++16 x p,,x=0x1-4 p=0-3
++n,,n=1-5
+,,Range is 0~9.999
+35023887 +n,RCnBallastCheckEnabled_SV,Ballast Check Enabled
+,,n= 1-5
+,,0xFF=Enable
+,,0x00=Disable
+35023903    +n,RCnBallastCheckLowerLimit_SV,Ballast Check Lower Limit
+,,n= 1-5
+,,Range is 0~20.00
+,,
+35023919 +n,RCnBallastCheckUpperLimit_SV,Ballast Check Upper Limit
+,,n= 1-5
+,,Range is 0~20.00
+,,
+35023935 +n,RCnTHVMonitorEnabled_SV,Throttle Valve Monitoring Enable
+,,n= 1-5
+,,0xFF=Enable
+,,0x00=Disable
+35023951 +n,RCnTHVMonitorErrorBand_SV,Throttle Valve Error Band (Torr)
+,,n= 1-5
+,,Range is 0~99.99
+35023968,RCnTHVMonitorSettleTime_SV,Throttle Valve Settle Time (second)
+,,n = 1-5
+,,Range is 0~65535
+35023984,RCnTHVMonitorOutOfBandTime_SV,Throttle Valve Out of Band Time (second)
+,,n = 1-5
+,,Range is 0~65535
+35023999 +n,RCnEmerALDReactorFanAutoLowerTemperatureLimit ,"The lower band limit temperature for the EmerALD Medallion reactor fan in Auto mode. When in Auto Mode, the fan will turn OFF when the GCP (TE331) reads less than this temperature. It will remain off until the temperature reaches the auto upper limit (RCXEmerALDReactorFanAutoUpperTemperatureLimit). (n=1-5)"
+35024016,RCXEmerALDReactorFanAutoUpperTemperatureLimit,"The upper band limit temperature for the EmerALD Medallion reactor fan in Auto mode. When in Auto Mode, the fan will turn ON when the GCP (TE331) reads more than this temperature. It will remain on until the temperature drops below the auto lower limit (RCXEmerALDReactorFanAutoLowerTemperatureLimit)."
+35016192 + 16?p + n,RCnMFCSetpointOffsetAIp,All ten Setpt Offset group data points for RCn Analog Input p.
+,,"xxx=4E0h-53Fh, p=0-95 (AI number)"
+,,n = 1-5  (reactor)
+,,Range is -50% to 50%
+,,
+35024944 +n,RCnSusUpPositionMM_SV,RCn susceptor Up position in millimeters.
+,,n = 1-5
+35024960 +n,RCnSusContactPositionMM_SV,RCn susceptor Contact position in millimeters.
+,,n = 1-5
+35024976 +n,RCnSusDownPositionMM_SV,RCn susceptor Down position in millimeters.
+,,n = 1-5
+35025008 +n,RCnSusRotationSpeedRPM_SV,RCn susceptor Rotational Speed of reactor n.
+,,Range=0.0-1125.0 (rpm)
+,,n = 1-4 (RC1-4)
+35025568,RCnTOpDelta,The TOpDelta delta of reactor n.
++16 x p,,"xx=2Ah-69h, p=0-63"
++n,,(for TO0~63. xx=2Ah;TO0)  (n=1-5)
+35026592,RCnDepoCountpIntValue,Expose Deposition Count of reactor n as integer value.
++16 x p,,"Xx=6Ah-7Dh, p=0-19, n=1-5"
++n,,
+35026912,RCnEtchCountpIntValue,Expose Etch Count of reactor n as integer value.
++16 x p,,"Xx=7Eh-91h, p=0-19, n=1-5"
++n,,
+34155520,WHCLLAIp,The actual Alp data in current WHC/LL. Al is an analog input value.
++16 x p,,"xx=C0h-CFh, p=0-15"
+,,?for AI0-15. xx=C0h:AI0?
+34155584,WHCLLAI4,"Fan Filter Unit (Left Unit, Fan #1) [Note this is included in the WHCLLAIp VID range]"
+,,
+34155600,WHCLLAI5,"Fan Filter Unit (Left Unit, Fan #2) [Note this is included in the WHCLLAIp VID range]"
+,,
+34155616,WHCLLAI6,"Fan Filter Unit (Right Unit, Fan #1) [Note this is included in the WHCLLAIp VID range]"
+,,
+34155632,WHCLLAI7,"Fan Filter Unit (Right Unit, Fan #2) [Note this is included in the WHCLLAIp VID range]"
+,,
+34156288,WHCLLAOp,The actual AOp data in current WHC/LL. AO is an analog output value.
++16 x p,,"xx=F0h-FFh ,p=0-15"
+,,?for AO0-15xx=D0h;AO0?
+34156544,WHCLLDIp,The current state of actual Dlp in WHC/LL. DI is a digital input value.
++16 x p,,"xx=00h-BFh, p=0-191"
+,,?for DI0-191; xx=00h; DI0?
+34159616,WHCLLDOp,The current state of actual DOp in WHC/LL. DO is a digital output value.
++16 x p,,"xxx=3C0h-47Fh, p=0-191"
+,,?for DO0-191; xxx=3C0h;DO0?
+34155776,WHCLLSAIp,The actual SAlp data in current WHC/LL. SAl is an analog Sensor input value.
++16 x p,,"xx=D0h- EFh ,p=0-31"
+,,?for SAI0-31; xx=D0h;SAI0?
+35021008 +n,LLnLeakCheckLeakRateLimit,"Loadlock n leak rate limit, where n= 1-2. Measure unit is in mTorr/min."
+,,
+35021012 +n,LLnLeakCheckWaitTime,"Loadlock n wait time, where n= 1-2."
+,,Measure unit is in second.
+35021016 +n,LLnLeakCheckLeakTime,"Loadlock n leak time, where n=1-2."
+,,Measure unit is in second.
+35021020 +n,LLnLeakCheckAbortLimit,"Loadlock n abort limit, where n=1-2."
+,,Measure unit is in Torr.
+35021024 +n,LLnLeakCheckInterval,Loadlock n leak check interval n=1-2.
+,,Measure unit is in minute.
+35021028 +n,LLnLeakCheckRetry,Loadlock n leak check retry n=1-2.
+,,Measure unit is in minute.
+35021033,WHCLeakCheckLeakRateLimit,WHC leak rate limit.
+,,Measure unit is in mTorr/min.
+35021034,WHCLeakCheckWaitTime,WHC wait time.
+,,Measure unit is in second.
+35021035,WHCLeakCheckLeakTime,WHC leak time.
+,,Measure unit is in second.
+35021036,WHCLeakCheckAbortLimit,WHC abort limit.
+,,Measure unit is in Torr.
+35021037,WHCLeakCheckInterval,WHC leak check interval.
+,,Measure unit is in minute.
+35021038,WHCLeakCheckRetry,WHC leak check retry.
+,,Measure unit is in minute.
+35027248,PressureDisplayUnits,"Type of units to use for displaying pressure values in capabilities. 0=Torr, 1=kPa."
+35027264,ATMLimit,Approximate atmospheric pressure at equipment location in Torr.
+3502728n,RCnPulsarPulsarPostHandoffN2FlowEnabled,"For RCn, indicates whether or not Post Handoff N2 Flow is enabled:"
+(35027281 – 35027285),,1: Post Handoff N2 Flow is enabled
+,,0: Post Handoff N2 Flow is not enabled.
+,,This is a Pulsar specific configuration setting.
+35027296+n,RCnPulsarPffMinTemp,Minimum temperature (in degrees Centigrade) needed before PFF capability can operate for reactor n.
+(35027297 – 3502731),,This is a Pulsar specific configuration setting.
+,,n=1-5
+35027312+n,RCnPulsarHigLeakCheckTime,HIG Leak Check time in seconds for reactor n.
+(35027313 – 3502737),,This is a Pulsar specific configuration setting.
+,,n=1-5
+35027328+n,RCnPulsarHigLeakCheckBasePressure,HIG Leak Check Base Pressure in Torr for reactor n.
+35027329 – 35027333,,This is a Pulsar specific configuration setting.
+,,n=1-5
+35027344+n,RCnPulsarHigLeakCheckRateLimit,HIG Leak Check Base Rate Limit in mTorr/minute for reactor n.
+35027345 – 35027349,,This is a Pulsar specific configuration setting.
+,,n=1-5
+3502736n,RCnPulsarHigPumpdownTarget,HIG Pumpdown target in Torr for reactor n.
+(35027361 – 35027365),,This is a Pulsar specific configuration setting.
+,,n=1-5
+35027376+n,RCnPulsarHigBackfillTimeout,HIG Backfill Timeout in seconds for reactor n.
+(35027377 – 35027381),,This is a Pulsar specific configuration setting.
+,,n=1-5
+35027392+n,RCnPulsarHasHigs,For reactor n.
+(35027393 – 35027397),,0 == no HIGs installed
+,,1 == HIGs are installed
+,,This is a Pulsar specific configuration setting.
+,,n=1-5
+35027408+n,RCnPulsarHasTMA,For reactor n.
+(35027409 – 35027413),,0 == no TMA installed
+,,1 == TMA installed
+,,This is a Pulsar specific configuration setting.
+,,n=1-5
+35027424+n,RCnPulsarSX_StandbyFlow,"Stand by flows for S5, S6, S7 and S8 for reactor n."
+35027425 – 35027429,,This is a Pulsar specific configuration setting.
+,,n=1-5
+3502744n,RCnStandbyFlow,"Inert gas standby flow for reactor n. On Pulsars, this is typically N2. On EmerALDs, this is typically Ar."
+(35027441 – 35027445),,n=1-5
+35028992,DefaultMaxDummyUses,The default number of times each dummy can be processed.  The value is used if nothing is provided with the Carrier introduction.
+,,Range is 0-255.
+35028993,DummyWafersRemaingLimit,The number of dummy wafers remaining before a Warning to notify the Host the low number of dummy wafers.
+,,Range is 0-255. A zero value disables the warning.
+35028994,DummyWafersRemaining,"The number of dummy wafer uses remaining, for the dummy type with the least uses remaining."
+,,Range is 0-65535.
+35029008,LoadPortnType,The type of Carrier that Loadport n is reserved to process.
++ n,,0=Unknown
+,,1=Product
+,,2=Non-Product Wafers (NPW)
+,,3=Mix
+,,4=Dummy
+,,(n=1-4)
+35029024,RCnCurrentIdleTime,The length of time each reactor has been idle.  Used to determine if Dummy Wafer processing is required.
++ n,,Range is 0~65535 sec
+,,(n=1-4)
+35029040 + 16×(i-1)+n,RCn_LSi_PulsarSourceType,Type of material in Source i of RCn. This is a Pulsar specific configuration setting.
+,,"(i=1-6, X= 3h-8h, n=1-4)"
+35029136 + 16×(i-1)+n,RCn_LSi_PulsarPnValveEnable,Flag indicating that the Pneumatic valve for source i of RCn is enabled.
+,,0: disabled
+,,1: enabled
+,,This is a Pulsar specific configuration setting.
+,,"n=1-5, i=1-6, X=9h-Eh (for i=1-6)"
+35029232 +n,RCnRcPumpdownTarget,Pumpdown target for RC n in Torr.
+,,(n=1-4)
+35029248 + 16×(i-1)+n,RCn_LSi_LPVEnabled,Flag indicating that the Low Profile Vessel (LPV) is present on source i of RCn is enabled.
+,,0: disabled
+,,1: enabled
+,,This is a Pulsar specific configuration setting
+,,"n=1-5, i=1-6, X=0h-5h (for i=1-6)"
+35029344 + n,RCnPumpTimeout,Pumpdown timeout for RCn in seconds.
+,,(n=1-4)
+3502936n,RCnBackfillTimeout,Backfill timeout for RCn in seconds
+,,(n=1-4)
+35029376+n,RCnBackfillFlow,Backfill for for RCn in sccm.
+,,This is an EmerALD specific configuration setting.
+,,(n=1-4)
+35029392+n,RCnSuscMoveTimeout,Susceptor movement timeout for RCn in seconds.
+,,(n=1-4)
+35029408+n,RCnPumpCrossoverPressure,"For RCn, the threshold (specified in Torr) for switching the pump valves from slow pump (above this threshold) to fast pump (below this threshold)."
+,,(n=1-4)
+35029424 + n,RCn_LSi_ChemName,Name of chemical used in source i on RCn.
+,,"n=1-5, i=1-6, XX=1Bh-20h (for i=1-6)"
+35029520 + n,RCn_VertSusSpeedFast,The RCn Vertical motor susceptor speed for the fast movement segments.
+,,n=1-4 (reactor)
+35029536 + n,RCn_VertSusSpeedSlow,The RCn Vertical motor susceptor speed for the slow movement segments.
+,,n=1-4 (reactor)
+35029552 + n,RCn_VertSusAccelFast,The RCn Vertical motor susceptor acceleration for the fast movement segments.
+,,n=1-4 (reactor)
+35029568 + n,RCn_VertSusAccelSlow,The RCn Vertical motor susceptor acceleration for the slow movement segments.
+,,n=1-4 (reactor)
+35029584 + n,RCn_VacuumLimit,"The RCn pressure, below which is considered to be at vacuum state."
+,,n=1-4 (reactor)
+35029600 + n,LLn_VacuumLimit,"The LLn pressure, below which is considered to be at vacuum state."
+,,"n=1-2 (LL1, LL2)"
+35029617,WHC_VacuumLimit,"The WHC pressure, below which is considered to be at vacuum state."
+35029632 + n,LLnPumpCrossoverPressure,The LLn pressure where the valve cross over between slow and fast pump.
+,,"n=1-2 (LL1, LL2)"
+35029649,WHCPumpCrossoverPressure,The WHC pressure where the valve cross over between slow and fast pump.
+35029664 + n,LLnPumpTimeout,The LLn time allowed to pump to pressure before a timeout occurs.
+,,"n=1-2 (LL1, LL2)"
+35029681,WHCPumpTimeout,The WHC time allowed to pump to pressure before a timeout occurs.
+35029697,PMParamEditMode,"Setting to allow or prevent editing PM Paraneters (from the MMI screen) when an RC is not in maintenance mode. 0=Allow PM parameter editing in all PM modes, 1 =Allow PM Parameter editing only when in Maintenance Mode."
+35029760,BerbTeachBRORCx-N,The teaching data for BRO BERBT of reactor.
++16 x M,,Format of one item: 20
++ N,,M means Position of RC.
+,,M=0:RC1
+,,M=1:RC2
+,,M=2:RC3
+,,M=3:RC4
+,,M=4:RC5
+,,N means Position of Arm.
+,,N=0:Arm1
+,,N=1:Arm2
+35029760,BerbTeachBRO_LLx-x-N,The teaching data for BRO BERBT of load lock.
++16 x M,,Format of one item: 20
++ N,,M means Position of LL.
+,,M=5:LL1-1
+,,M=6:LL1-2
+,,M=7:LL2-1
+,,M=8:LL2-2
+,,N means Position of Arm
+,,N=0:Arm1
+,,N=1:Arm2
+35030272,BerbTeachJELxPosLLR-N,The x position teaching data for JEL BERBT of load lock.
++(16 x M),,M=0-3
++ N,,M means Position of LL.
+,,M=0:LL1-1
+,,M=1:LL1-2
+,,M=2:LL2-1
+,,M=3:LL2-2
+,,R is one of the following strings
+,,“1-1” (when M=0)
+,,“1-2” (when M=1)
+,,“2-1” (when M=2)
+,,“2-2” (when M=3)
+,,N=0-5
+,,N means Position of XEx or YEx.
+,,N=0:XExDown
+,,N=1:XExBase
+,,N=2:XExUp
+,,N=3:YExDown
+,,N=4:YExBase
+,,N=5:YExUp
+35030272,BerbTeachJELxPosRCn-N,The x position teaching data for JEL BERBT of reactor.
++(16 x M),,M=4-8
++ N,,M means Position of RC.
+,,M=4:RC1
+,,M=5:RC2
+,,M=6:RC3
+,,M=7:RC4
+,,M=8:RC5
+,,n=1-5 (for RC1 – RC5)
+,,N=0-5
+,,N means Position of XEx or YEx.
+,,N=0:XExDown
+,,N=1:XExBase
+,,N=2:XExUp
+,,N=3:YExDown
+,,N=4:YExBase
+,,N=5:YExUp
+35030528,BerbTeachJELyPosLLR-N,The y position teaching data for JEL BERBT of load lock R-N.
++(16 x M),,M=0-3
++ N,,M means Position of LL.
+,,M=0: LL1-1
+,,M=1: LL1-2
+,,M=2: LL2-1
+,,M=3: LL2-2
+,,R is one of the following strings
+,,“1-1” (when M=0)
+,,“1-2” (when M=1)
+,,“2-1” (when M=2)
+,,“2-2” (when M=3)
+,,N=0-5
+,,N means Position of XEx or YEx.
+,,N=0:XExDown
+,,N=1:XExBase
+,,N=2:XExUp
+,,N=3:YExDown
+,,N=4:YExBase
+,,N=5:YExUp
+35030528,BerbTeachJELyPosRCn-N,The y position teaching data for JEL BERBT of reactor n N.
++(16 x M),,M=4-8
++ N,,M means Position of RC.
+,,M=4: RC1
+,,M=5: RC2
+,,M=6: RC3
+,,M=7: RC4
+,,M=8: RC5
+,,n = 1-5 (for RC1 – RC5)
+,,N=0-5
+,,N means Position of XEx or YEx.
+,,N=0:XExDown
+,,N=1:XExBase
+,,N=2:XExUp
+,,N=3:YExDown
+,,N=4:YExBase
+,,N=5:YExUp
+35030784,BerbTeachJELuPosLLR-N,The u position teaching data for JEL BERBT of load lock.
++(16 x M),,M=0-3
++ N,,M means Position of LL.
+,,M=0: LL1-1
+,,M=1: LL1-2
+,,M=2: LL2-1
+,,M=3: LL2-2
+,,R is one of the following strings
+,,“1-1” (when M=0)
+,,“1-2” (when M=1)
+,,“2-1” (when M=2)
+,,“2-2” (when M=3)
+,,N=0-5
+,,N means Position of XEx or YEx.
+,,N=0:XExDown
+,,N=1:XExBase
+,,N=2:XExUp
+,,N=3:YExDown
+,,N=4:YExBase
+,,N=5:YExUp
+35030784,BerbTeachJELuPosRCn-N,The u position teaching data for JEL BERBT of reactor.
++(16 x M),,M=4-8
++ N,,M means Position of RC.
+,,M=4:RC1
+,,M=5:RC2
+,,M=6:RC3
+,,M=7:RC4
+,,M=8:RC5
+,,n = 1-5 (for RC1 – RC5)
+,,N=0-5
+,,N means Position of XEx or YEx.
+,,N=0:XExDown
+,,N=1:XExBase
+,,N=2:XExUp
+,,N=3:YExDown
+,,N=4:YExBase
+,,N=5:YExUp
+35031040 +(16 x M),BerbTeachJELzPosLLR-N,The z position teaching data for JEL BERBT of load lock.
++ N,,M=0-3
+,,M means Position of LL.
+,,M=0:LL1-1
+,,M=1:LL1-2
+,,M=2:LL2-1
+,,M=3:LL2-2
+,,R is one of the following strings
+,,“1-1” (when M=0)
+,,“1-2” (when M=1)
+,,“2-1” (when M=2)
+,,“2-2” (when M=3)
+,,N=0-5
+,,N means Position of XEx or YEx.
+,,N=0:XExDown
+,,N=1:XExBase
+,,N=2:XExUp
+,,N=3:YExDown
+,,N=4:YExBase
+,,N=5:YExUp
+35031040 +(16 x M),BerbTeachJELzPosRCn-N,The z position teaching data for JEL BERBT of reactor.
++ N,,M=4-8
+,,M means Position of RC.
+,,M=4:RC1
+,,M=5:RC2
+,,M=6:RC3
+,,M=7:RC4
+,,M=8:RC5
+,,n = 1-5 (for RC1 – RC5)
+,,N=0-5
+,,N means Position of XEx or YEx.
+,,N=0:XExDown
+,,N=1:XExBase
+,,N=2:XExUp
+,,N=3:YExDown
+,,N=4:YExBase
+,,N=5:YExUp
+35029904 +n,FerbTeachKHIDyPosLPn,The y position teaching data for KHID FERBT of load port n.
+,,(n=1-4)
+35029908,FerbTeachKHIDyPosLLn,The y position teaching data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35029910,FerbTeachKHIDyPosCSTGn,The y position teaching data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,"N=7-8 (for LL1, LL2)"
+35029913,FerbTeachKHIDyPosMetrology,The y position teaching data for KHID FERBT of metrology.
+,,
+35029914,FerbTeachKHIDyPosAligner,The y position teaching data for KHID FERBT of aligner.
+,,
+35029920 +n,FerbTeachKHIDuPosLPn,The u position teaching data for KHID FERBT of load port n.
+,,(n=1-4)
+35029924,FerbTeachKHIDuPosLLn,The u position teaching data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35029926,FerbTeachKHIDuPosCSTGn,The u position teaching data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35029929,FerbTeachKHIDuPosMetrology,The u position teaching data for KHID FERBT of metrology.
+,,
+35029930,FerbTeachKHIDuPosAligner,The u position teaching data for KHID FERBT of aligner.
+,,
+35029936 +n,FerbTeachKHIDzPosLPn,The z position teaching data for KHID FERBT of load port n.
+,,(n=1-4)
+35029940,FerbTeachKHIDzPosLLn,The z position teaching data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35029942,FerbTeachKHIDzPosCSTGn,The z position teaching data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35029945,FerbTeachKHIDzPosMetrology,The z position teaching data for KHID FERBT of metrology.
+,,
+35029946,FerbTeachKHIDzPosAligner,The z position teaching data for KHID FERBT of aligner.
+,,
+35029952 +n,FerbTeachKHIDxuPosLPn,The xu position teaching data for KHID FERBT of load port n.
+,,(n=1-4)
+35029956,FerbTeachKHIDxuPosLLn,The xu position teaching data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35029958,FerbTeachKHIDxuPosCSTGn,The xu position teaching data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35029961,FerbTeachKHIDxuPosMetrology,The xu position teaching data for KHID FERBT of metrology.
+,,
+35029962,FerbTeachKHIDxuPosAligner,The xu position teaching data for KHID FERBT of aligner.
+,,
+35029968 +n,FerbTeachKHIDxdPosLPn,The xd position teaching data for KHID FERBT of load port n.
+,,(n=1-4)
+35029972,FerbTeachKHIDxdPosLLn,The xd position teaching data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35029974,FerbTeachKHIDxdPosCSTGn,The xd position teaching data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35029977,FerbTeachKHIDxdPosMetrology,The xd position teaching data for KHID FERBT of metrology.
+,,
+35029978,FerbTeachKHIDxdPosAligner,The xd position teaching data for KHID FERBT of aligner.
+,,
+35029984 +n,FerbParamKHIDSlotLPn,The slot parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35029988,FerbParamKHIDSlotLLn,The slot parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35029990,FerbParamKHIDSlotCSTGn,The slot parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35029993,FerbParamKHIDSlotMetrology,The slot parameter data for KHID FERBT of metrology.
+,,
+35029994,FerbParamKHIDSlotAligner,The slot parameter data for KHID FERBT of aligner.
+,,
+35030000 +n,FerbParamKHIDSdisLPn,The Sdis parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030004,FerbParamKHIDSdisLLn,The Sdis parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030006,FerbParamKHIDSdisCSTGn,The Sdis parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030009,FerbParamKHIDSdisMetrology,The Sdis parameter data for KHID FERBT of metrology.
+,,
+35030010,FerbParamKHIDSdisAligner,The Sdis parameter data for KHID FERBT of aligner.
+,,
+35030016 +n,FerbParamKHIDUOffLPn,The UOff parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030020,FerbParamKHIDUOffLLn,The UOff parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030022,FerbParamKHIDUOffCSTGn,The UOff parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030025,FerbParamKHIDUOffMetrology,The UOff parameter data for KHID FERBT of metrology.
+,,
+35030026,FerbParamKHIDUOffAligner,The UOff parameter data for KHID FERBT of aligner.
+,,
+35030032 +n,FerbParamKHIDLOffLPn,The LOff parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030036,FerbParamKHIDLOffLLn,The LOff parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030038,FerbParamKHIDLOffCSTGn,The LOff parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030041,FerbParamKHIDLOffMetrology,The LOff parameter data for KHID FERBT of metrology.
+,,
+35030042,FerbParamKHIDLOffAligner,The LOff parameter data for KHID FERBT of aligner.
+,,
+35030048 +n,FerbParamKHIDGBefLPn,The GBef parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030052,FerbParamKHIDGBefLLn,The GBef parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030054,FerbParamKHIDGBefCSTGn,The GBef parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030057,FerbParamKHIDGBefMetrology,The GBef parameter data for KHID FERBT of metrology.
+,,
+35030058,FerbParamKHIDGBefAligner,The GBef parameter data for KHID FERBT of aligner.
+,,
+35030064 +n,FerbParamKHIDGAftLPn,The GAft parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030068,FerbParamKHIDGAftLLn,The GAft parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030070,FerbParamKHIDGAftCSTGn,The GAft parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030073,FerbParamKHIDGAftMetrology,The GAft parameter data for KHID FERBT of metrology.
+,,
+35030074,FerbParamKHIDGAftAligner,The GAft parameter data for KHID FERBT of aligner.
+,,
+35030080 +n,FerbParamKHIDPBefLPn,The PBef parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030084,FerbParamKHIDPBefLLn,The PBef parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030086,FerbParamKHIDPBefCSTGn,The PBef parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030089,FerbParamKHIDPBefMetrology,The PBef parameter data for KHID FERBT of metrology.
+,,
+35030090,FerbParamKHIDPBefAligner,The PBef parameter data for KHID FERBT of aligner.
+,,
+35030096 +n,FerbParamKHIDPAftLPn,The PAft parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030100,FerbParamKHIDPAftLLn,The PAft parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030102,FerbParamKHIDPAftCSTGn,The PAft parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030105,FerbParamKHIDPAftMetrology,The PAft parameter data for KHID FERBT of metrology.
+,,
+35030106,FerbParamKHIDPAftAligner,The PAft parameter data for KHID FERBT of aligner.
+,,
+35030112 +n,FerbParamKHIDGWSpdLPn,The GWSpd parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030116,FerbParamKHIDGWSpdLLn,The GWSpd parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030118,FerbParamKHIDGWSpdCSTGn,The GWSpd parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030121,FerbParamKHIDGWSpdMetrology,The GWSpd parameter data for KHID FERBT of metrology.
+,,
+35030122,FerbParamKHIDGWSpdAligner,The GWSpd parameter data for KHID FERBT of aligner.
+,,
+35030128 +n,FerbParamKHIDGASpdLPn,The GASpd parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030132,FerbParamKHIDGASpdLLn,The GASpd parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030134,FerbParamKHIDGASpdCSTGn,The GASpd parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030137,FerbParamKHIDGASpdMetrology,The GASpd parameter data for KHID FERBT of metrology.
+,,
+35030138,FerbParamKHIDGASpdAligner,The GASpd parameter data for KHID FERBT of aligner.
+,,
+35030144 +n,FerbParamKHIDPWSpdLPn,The PWSpd parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030148,FerbParamKHIDPWSpdLLn,The PWSpd parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030150,FerbParamKHIDPWSpdCSTGn,The PWSpd parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030153,FerbParamKHIDPWSpdMetrology,The PWSpd parameter data for KHID FERBT of metrology.
+,,
+35030154,FerbParamKHIDPWSpdAligner,The PWSpd parameter data for KHID FERBT of aligner.
+,,
+35030160 +n,FerbParamKHIDPASpdLPn,The PASpd parameter data for KHID FERBT of load port n.
+,,(n=1-4)
+35030164,FerbParamKHIDPASpdLLn,The PASpd parameter data for KHID FERBT of load lock n.
++n,,n=1-2
+,,N=5-6 (for n=1-2)
+35030166,FerbParamKHIDPASpdCSTGn,The PASpd parameter data for KHID FERBT of cooling stage n.
++n,,n=1-2
+,,N=7-8 (for n=1-2)
+35030169,FerbParamKHIDPASpdMetrology,The PASpd parameter data for KHID FERBT of metrology.
+,,
+35030170,FerbParamKHIDPASpdAligner,The PASpd parameter data for KHID FERBT of aligner.
+,,
+35030177,FerbParamKHIDyLowArmOffset,The y Low Arm Offset parameter data for KHID FERBT.
+,,
+35030178,FerbParamKHIDuLowArmOffset,The u Low Arm Offset parameter data for KHID FERBT.
+,,
+35030179,FerbParamKHIDaLowArmOffset,The a Low Arm Offset parameter data for KHID FERBT.
+,,
+35030180,FerbParamKHIDzLowArmOffset,The z Low Arm Offset parameter data for KHID FERBT.
+,,
+35031184,BerbSpeedJELXSpdHxPos,The SpdH xPos speed data for JEL BERBT.
+,,
+35031185,BerbSpeedJELXSpdLxPos,The SpdL xPos speed data for JEL BERBT.
+,,
+35031186,BerbSpeedJELXAcclxPos,The Accl xPos speed data for JEL BERBT.
+,,
+35031187,BerbSpeedJELXJerkxPos,The Jerk xPos speed data for JEL BERBT.
+,,
+35031188,BerbSpeedJELXSpdHyPos,The SpdH yPos speed data for JEL BERBT.
+,,
+35031189,BerbSpeedJELXSpdLyPos,The SpdL yPos speed data for JEL BERBT.
+,,
+35031190,BerbSpeedJELXAcclyPos,The Accl yPos speed data for JEL BERBT.
+,,
+35031191,BerbSpeedJELXJerkyPos,The Jerk yPos speed data for JEL BERBT.
+,,
+35031192,BerbSpeedJELXSpdHuPos,The SpdH uPos speed data for JEL BERBT.
+,,
+35031193,BerbSpeedJELXSpdLuPos,The SpdL uPos speed data for JEL BERBT.
+,,
+35031194,BerbSpeedJELXAccluPos,The Accl uPos speed data for JEL BERBT.
+,,
+35031195,BerbSpeedJELXJerkuPos,The Jerk uPos speed data for JEL BERBT.
+,,
+35031196,BerbSpeedJELXSpdHzPos,The SpdH zPos speed data for JEL BERBT.
+,,
+35031197,BerbSpeedJELXSpdLzPos,The SpdL zPos speed data for JEL BERBT.
+,,
+35031198,BerbSpeedJELXAcclzPos,The Accl zPos speed data for JEL BERBT.
+,,
+35031199,BerbSpeedJELXJerkzPos,The Jerk zPos speed data for JEL BERBT.
+,,
+35031296 +(16 x M),BerbTeachBROrPosRCn-N,The r position teaching data for BRO BERBT of reactor.
++ N,,n=1-5
+,,M=0-4
+,,M means Position of RC.
+,,M=0:RC1
+,,M=1:RC2
+,,M=2:RC3
+,,M=3:RC4
+,,M=4:RC5
+,,N=0-1
+,,N means Position of Arm.
+,,N=0:Arm1
+,,N=1:Arm2
+35031296 +(16 x M),BerbTeachBROrPosLLR-N,The r position teaching data for BRO BERBT of load lock.
++ N,,M=5-8
+,,M means Position of LL.
+,,M=5:LL1-1
+,,M=6:LL1-2
+,,M=7:LL2-1
+,,M=8:LL2-2
+,,R is one of the following strings:
+,,“1-1” (when M=5)
+,,“1-2” (when M=6)
+,,“2-1” (when M=7)
+,,“2-2” (when M=8)
+,,N=0-1
+,,N means Position of Arm
+,,N=0:Arm1
+,,N=1:Arm2
+35031552 +(16 x M),BerbTeachBROtPosRCn-N,The t position teaching data for BRO BERBT of reactor.
++ N,,n=1-5
+,,M=0-4
+,,M means Position of RC.
+,,M=0:RC1
+,,M=1:RC2
+,,M=2:RC3
+,,M=3:RC4
+,,M=4:RC5
+,,N=0-1
+,,N means Position of Arm.
+,,N=0:Arm1
+,,N=1:Arm2
+35031552 +(16 x M),BerbTeachBROtPosLLR-N,The t position teaching data for BRO BERBT of load lock.
++ N,,M=5-8
+,,M means Position of LL.
+,,M=5:LL1-1
+,,M=6:LL1-2
+,,M=7:LL2-1
+,,M=8:LL2-2
+,,R is one of the following strings:
+,,“1-1” (when M=5)
+,,“1-2” (when M=6)
+,,“2-1” (when M=7)
+,,“2-2” (when M=8)
+,,N=0-1
+,,N means Position of Arm
+,,N=0:Arm1
+,,N=1:Arm2
+35031808,BerbTeachBROzuPosRCn-N,The zu position teaching data for BRO BERBT of reactor.
++(16 x M),,n=1-5
++ N,,M=0-4
+,,M means Position of RC.
+,,M=0:RC1
+,,M=1:RC2
+,,M=2:RC3
+,,M=3:RC4
+,,M=4:RC5
+,,N=0-1
+,,N means Position of Arm.
+,,N=0:Arm1
+,,N=1:Arm2
+35031808,BerbTeachBROzuPosLLR-N,The zu position teachng data for BRO BERBT of load lock.
++(16 x M),,M=5-8
++ N,,M means Position of LL.
+,,M=5:LL1-1
+,,M=6:LL1-2
+,,M=7:LL2-1
+,,M=8:LL2-2
+,,R is one of the following strings:
+,,“1-1” (when M=5)
+,,“1-2” (when M=6)
+,,“2-1” (when M=7)
+,,“2-2” (when M=8)
+,,N=0-1
+,,N means Position of Arm
+,,N=0:Arm1
+,,N=1:Arm2
+35032064 +(16 x M),BerbTeachBROzdPosRCn-N,The zd position teachng data for BRO BERBT of reactor.
++ N,,n=1-5
+,,M=0-4
+,,M means Position of RC.
+,,M=0:RC1
+,,M=1:RC2
+,,M=2:RC3
+,,M=3:RC4
+,,M=4:RC5
+,,N=0-1
+,,N means Position of Arm.
+,,N=0:Arm1
+,,N=1:Arm2
+35032064 +(16 x M),BerbTeachBROzdPosLLR-N,The zd position teachng data for BRO BERBT of load lock.
++ N,,M=5-8
+,,M means Position of LL.
+,,M=5:LL1-1
+,,M=6:LL1-2
+,,M=7:LL2-1
+,,M=8:LL2-2
+,,R is one of the following strings
+,,“1-1” (when M=5)
+,,“1-2” (when M=6)
+,,“2-1” (when M=7)
+,,“2-2” (when M=8)
+,,N=0-1
+,,N means Position of Arm
+,,N=0:Arm1
+,,N=1:Arm2
+35032208+X,RCXSuscAngle,The susceptor angle for RC X.
+,,Range = 0.0 – 359.9 (degrees)
+,,(X=1-5)
+35032224,T1Timer,SECS protocol T1 Timer (Inter-Character Timeout).
+,,Range is 0.1 to 10.0 (seconds).
+35032240,T2Timer,SECS protocol T2 Timer (Protocol Timeout).
+,,Range is 0.2 to 25.0 (seconds).
+35032256,T4Timer,SECS protocol T4 Timer (Inter-Block Timeout).
+,,Range is 1 to 120 (seconds).
+35032320 +n +m*16,RCnCorrectionParamXStartRegion,RCn TAC Correction Parameter X Start Region
+,,n=1-4
+,,m=1-9 (X=2-10)
+35032832 +n +m*16,RCnCorrectionParamXStartCF,RCn TAC Correction Parameter X Start Correction Factor
+,,n=1-4
+,,m=1-9 (X=2-10)
+35033344 +n +m*16,RCnTACXStartSetPoint,RCn TACX Start Set Point (this is the temperature setpoint for the TE independent before adding the CF).
+,,n=1-4
+,,m=0-3 (X=1-4)
+35033600 +n +m*16,RCnTACXTempSetPoint,RCn TACm Temp Set Point (this is the Start setpoint for the TE + Correction Factor for the module) 
+,,n=1-4
+,,m=0-3 (X=1-4)
+35033856 +n,RCnCurrentCorrectionFactor,RCn Current TAC Correction Factor (the CF is one value applied to all TE’s for a given RC)
+,,n=1-4

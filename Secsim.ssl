@@ -1,0 +1,1787 @@
+/*--------------------------------------------------------------------------
+' File: secsim.ssl      Version: 1.1                          Date: 05-14-96
+'
+' Function(s):
+'    DropForgottenMessage : Removes message from in work list of messages
+'    DropMessage : Waits xx seconds and then calls DropForgottenMessage
+'    FindPendingMessage : Sees if a message needs to be responded to
+'    NoteSIMMessage : Is called when Send A Message item is selected.
+'    S2F18 : Is called by Secsim to send back a S2F18 with the current time
+'    S2F26 : Is called by Secsim to send back a S2F26
+'    Secsim : Catches and responds to incoming messages
+'    SendAMessage : Sends a Reply Message for various cases
+'
+' Description:
+'    This set of functions will emulate SECSIM.  When a message is selected
+'    to be sent from the "Send A Message" window the NoteSIMMessage function
+'    is called to allow the script writer to do something special or to
+'    just send the message.  The function Secsim is running
+'    as a separate task and is waiting for a new unexpected primary
+'    message to come in.
+'
+' Author(s):
+'    GW Associates Staff
+'
+' Cautions: This file must be loaded AFTER SECSIM.SML
+'
+' Mods:
+'    Date     Who Description
+'    -------- --- -------------------------------------------------------
+'    10-29-95 GW  1) Creation
+'    11-07-95 GW  1) Cleaned up for release
+'    05-14-96 GW  1) Added logn() call to print incoming and outgoing 'SxFy'
+'                    and length information for messages, even if logging is
+'                    turned off.  Disabling logging improves performance.
+'                    These new printouts still gives enough information to
+'                    show successful communication.
+'                 2) Modified Secsim() function to not reply to incoming
+'                    primary messages that have WBIT = 0.
+'    06-10-96 cjs 1) Removed call to Globals() from Secsim().
+'    08-19-96 cjs 1) Removed function S1F16 since it was not a correct
+'                    example of the S1F16 SECS message.
+'                 2) Added S2F18 to get the current time and send it!
+'    11-12-96 kl     SPR#453 inserted readable descriptions for coming in and going out
+'                    primary messages.
+'    12-04-96 dlr 1) Prepared for 1.1 Release
+'    01-28-99 kl  1) "Timeout Discard"
+'
+'    02/01/00 BW  Added dialog to prompt for which port ID to use.
+'-------------------------------------------------------------------------- */
+
+// This function will wait 'interval' seconds and then call
+// a function which will remove the message from our global
+// list of functions which are waiting for processing.
+DropForgottenMessage ( msg, interval )
+{
+	wait( newTimer( interval ) );
+	DropMessage( msg, msg.wbit );
+}
+
+// This function will "drop" messages that were not processed by any
+// script tasks.
+DropMessage ( msg, flag )
+{
+	local temp;
+
+	temp = reverse( ManualList );
+	ManualList = ();
+	while (!IsEmptyList( temp ))
+	{
+		if (GetFirst( temp ) != msg)
+		{
+			ManualList = InsertFirst( GetFirst( temp ), ManualList );
+		}
+		else if (flag)
+		{
+			logn( "Timeout-Discard of ", msg );
+		}
+		temp = RemoveFirst( temp );
+	}
+}
+
+// Determine if a primary message is still waiting around to
+// be responded to.
+FindPendingMessage ( msg )
+{
+	local temp;
+	local original;
+
+	temp = reverse( ManualList );
+	while (temp)
+	{
+		original = GetFirst( temp );
+		temp = RemoveFirst( temp );
+		if (original.stream != msg.stream)
+		{
+			continue;
+		}
+		if ((msg.function != original.function+1) && (msg.function != 0))
+		{
+			continue;
+		}
+		return( original );
+	}
+
+	// send back the empty list
+	return( () );
+}
+
+// This function is run whenever someone sends a message from the
+// "Send A Message" windows of the GUI.  This allows the script writer
+// to perform actions on the message before sending it.  Each time this
+// function is called it will start a new task to process the simmsg.
+NoteSIMMessage ( simmsg )
+{
+	SendAMessage( simmsg, lookupname( simmsg ) );
+}
+
+// This function will be called to respond to a S2F17 that has arrived.
+// Make sure to load this file into SECSIM Pro's memory after any SML files
+// have been loaded, this will make sure that the S2F18 object is up to date.
+// S2F18 (msg)
+// {
+	// local useful_time;
+
+	// // GetDateTime() returns a 16 byte string of the form
+	// // YYYYmmddhhmmsscc.
+	// // S2F18 must return only a 12 byte time string, so I will
+	// // remove the first 2 and the last 2 bytes and send that in
+	// // response.
+
+	// // remove first 2 bytes and last 2 bytes
+	// useful_time = SubString(GetDateTime(), 2);
+	// useful_time = SubString(useful_time, 0, GetCount(useful_time) - 2);
+
+	// // Send the message
+	// msg = SendReply(msg, <A useful_time> );
+	// wait( msg );
+// }
+
+// This function will be called to respond to a S2F25 that has arrived.
+// Make sure to load this file into SECSIM Pro's memory after any SML files
+// have been loaded, this will make sure that the S2F26 object is up to date.
+// S2F26 ( msg )
+// {
+	// msg = SendReply( msg, msg.text );
+	// wait( msg );
+// }
+
+// This function is the first place a new unexpected primary message
+// is sent to.  It will determine if there is a response needed and
+// act accordingly.
+Secsim ()
+{
+	local myreply;
+	local name;
+	local msg;
+	local port;
+	local PWCount;
+	local RecCount;
+
+	logn( "Thinh - Begins Secsim.ssl" );
+	//TOTALPORT = 3;
+	//Initialize_Intro();
+
+	// Multi-Entity:  comment out the port assignment and uncomment
+	// the other call.  This call will ask the user which port will
+	// be used for this instance of IdleRun
+
+	port = 0;
+	//port =GuiGetInteger("Secsim: Use which SECSIM Pro Port ID ?");
+
+	// Enable Port with no parameters will use the port selected
+	// as the default in the Options:Project Settings SECS-I or
+	// HSMS-SS tabbed box, (depending on the protocol in use)
+	// logn converts the integer return to a string automatically!
+	logn("Enable Port Status = ", EnablePort(port));
+	logn("Script initialization completed. ");
+
+	// Set up to receive messages
+	Subscribe(port);
+
+	while (1)
+	{
+//		logn( "Thinh - Secsim's whileloop" );
+		// obtain an object to wait for messages with
+		msg = newMessageIn();
+		wait( msg );
+
+		// if it a primary message?
+		if (msg.function & 0x01)
+		{
+//			logn( "Thinh - Secsim now handles S", msg.stream, "F", msg.function);
+			logn( "Thinh - Secsim - verifying received message" );
+			// print the status of the incoming message
+			if( msg.status != S_RECV )
+				log( EP_Translate(msg.stream, msg.function), "\n Received, Primary Status is:  (", Translate(msg.status), ")" );
+			else
+				log( "Received ", EP_Translate(msg.stream, msg.function), ".");
+
+			logn( " (S", msg.stream, "F", msg.function, ": length = ",
+				GetCount(tostring(msg.text)), ")"  );
+
+			// build the SxFx name and look it up in SECSIM Pro's memory
+			name = catstring( "S", toASCII( msg.stream ), "F", toASCII( msg.function + 1 ) );
+
+			// store the item in a variable I can manipulate
+			myreply = lookupName( name );
+
+			//uncomment next line for debug purposes:shows the message
+			// dump(myreply);
+
+			if (IsEmptyList( myreply ) || (msg.wbit == 0))
+			{
+				//logn( "Thinh - Secsim - Not found" );
+
+				// Stream 9 messages are not responded to!
+				if ( msg.stream == 9 )
+				{
+					logn( "Thinh - Secsim - S9" );
+
+					UnReceive();
+				}
+				else
+				{
+					//logn( "Thinh - Secsim - No reply" );
+
+					// add this to the list of messages that have come in
+					ManualList = InsertFirst( msg, ManualList );
+
+					// run a task that will dispose of a message after 30
+					// seconds if no one has responded to it
+					run( DropForgottenMessage, newlist( msg, 30 ) );
+				}
+			}
+			// IsMessage checks for objects that have been defined in the
+			// script language that represent a valid SECS message.
+			// IsSimMessage checks for valid messages defined in .SML
+			// files that have been compiled into .SIM files.
+			else if (IsMessage( myreply ) || IsSimMessage(myreply))
+			{
+				logn( "Thinh - Secsim - Found in SML. Using SML reply" );
+
+				// sends the reply message back.  It takes any parts of
+				// myreply that represent data and parts from msg that
+				// are the device id and system bytes, in this way the
+				// Reply will be correctly associated with the Primary
+				SendReply( msg, myreply );
+				x = newmessage(myreply);
+				logn( "Sending Reply: S",x.stream,"F",x.function,": length = ",
+					GetCount(tostring(x.text)));
+
+				// not needed, however this will tell us if the message
+				// was sent correctly
+				msg = wait( msg );
+
+				if (msg.stream == 7 && msg.function == 20)
+				{
+					RecCount = RecCount + 1;
+					logn( "Thinh - Secsim - RecCount = ", RecCount );
+					if (RecCount > 2)
+					{
+						RecCount = 0;						
+						//PortTaskObj = run(Setup_Port) ;
+					}
+				}
+				// only log message when error
+				if( msg.status != S_DELV )
+					logn( "Sending Reply Status is...\n  (", Translate(msg.status), ")" );
+			}
+			// SSL allows for an object to be a function type, here we
+			// are checking to see if the "reply message" is really a
+			// function that we should be calling.
+			else if (IsFunction( myreply ))
+			{
+//				logn( "Thinh - Secsim - Found a function. Making Function Call" );
+
+				// it is a function, so pass it the incoming message
+				// in this example we have defined S1F16 as a reply message
+				// to test this send an S1F15 from the other end of the
+				// link.  Make sure that you do not have a S1F16 in your
+				// .SML file, OR make sure to load this secsim.ssl file
+				// last in your project, whatever file is loaded last,
+				// those symbols take precedence.
+
+				myreply( msg );
+
+//				if (myreply == S14F10)
+//					JobObj = run(HandleJob);
+			}
+			else
+			{
+				logn( "The name '", name, "' is not a valid reply." );
+			}
+		}
+		else
+		{
+
+			logn( "Thinh - Secsim - Secondary message" );
+
+			logn( "Received Secondary Status is...\n  (", Translate(msg.status), ")" );
+			logn( "S",msg.stream,"F",msg.function,": length = ",GetCount(tostring(msg.text)));
+		}
+	}
+	
+	logn( "Thinh - Ends Secsim.ssl" );
+		
+	Unsubscribe();
+}
+
+// This function will send a reply message to the other end of the link.
+SendAMessage ( selectedName, selectedMessage )
+{
+	local original;
+
+	// Check to see if the message that we are sending is a SECSIM .SML
+	// created message, if it is then we know how to send it to the host.
+	if (IsSIMMessage( selectedMessage ))
+	{
+		// In order to look at the fields in this message we must convert
+		// it from a static SML generated SECS message to a SSL structured
+		// message.  This line will convert the message to something we
+		// can "work" with.
+		selectedMessage = NewMessage(selectedMessage);
+
+		// is it a primary message?
+		if (selectedMessage.function & 0x01)
+		{
+			// send the message to the other end of the link
+			// then wait for a response message
+			SendPrimary( selectedMessage );
+			log( "Sending ", HP_Translate(selectedMessage.stream,selectedMessage.function) );
+			logn( ": S",selectedmessage.stream,"F",selectedmessage.function,": length = ",
+				GetCount(tostring(selectedmessage.text)));
+			wait( selectedMessage );
+
+			// only log message when error
+			if( selectedMessage.status != S_DONE ) {
+				log( "Received Status is: ", Translate(selectedMessage.status) );
+				logn( " (S",selectedmessage.stream,"F",selectedmessage.function,": length = ",
+					GetCount(tostring(selectedmessage.text)), ")");
+			}
+
+		}
+		// the operator has selected to manually respond to a previously
+		// received primary message.  In other words, there was no message
+		// with the correct response name in SECSIM Pro's memory when the
+		// primary came in.  This supports the SML message labeling feature
+		// that is used in SECSIM and SECSIM Pro's SML files.  Instead of
+		// using the SxFx message name for a message, you can use a string
+		// like Good_Response or Bad_Response.  This else part will handle
+		// the case where the operator selects to send the "named" message.
+		else
+		{
+			// see if the message is in the pending list and remove
+			// the message from the pending list if it is there.
+			original = FindPendingMessage( selectedMessage );
+
+			// if the message was found?  (i.e. did not return an empty
+			// list ()
+			if (original)
+			{
+				DropMessage( original );
+				logn( "Sending Secondary ", selectedName, "..." );
+
+				// to ensure that a .Function 0 will get copied if that
+				// is the one we want.  The reason we have to assign the
+				// .function field, is that normally SendReply will simply
+				// increment the .function field if the message is ODD,
+				// since that will not be correct for SxF0 response
+				// messages, we copy in the .function before the call,
+				original.function = selectedMessage.function;
+				selectedMessage = SendReply( original, selectedMessage );
+				selectedMessage = wait( selectedMessage );
+
+				//only log message when error
+				if( selectedMessage.status != S_DELV )
+					logn( "Sending Reply Status is...\n  (", Translate(selectedMessage.status), ")" );
+			}
+			else
+			{
+				logn( "\"", selectedName, "\" is not waiting for a Reply." );
+			}
+		}
+	}
+	else
+	{
+		logn( "\"", selectedName, "\" is not a SML generated .SIM Message." );
+	}
+}
+
+/*--------------------------------------------------------------------------
+' File:       utils.ssl                                Date: 04-29-97
+'
+' Function(s):
+'    Translate    : Translates return codes to english
+'    GetFileName  : Sample for getting a filename
+'    S2_Decode    : Enhanced Decode; returns atomic data if it is 1 item, or SSL List
+'    Set_EC       : Sets an Equipment Constant
+'    Get_Vid      : Gets a VID (Variable) ID) from equipment using S1F3, S1F11
+'    HP_Translate : Host Primary Message Translation
+'    EP_Translate : Equipment Primary Message Translation
+'    Script_error : displays error message
+'    Comm_Fail    : communication fails
+'
+'
+' Description:
+'    This file has some sample utilities that may be useful to several
+'    projects.
+'
+' Author(s):
+'    GW Associates Staff, (cjs)
+'
+' Cautions:
+'
+' Mods:
+'    Date     Who Description
+'    -------- --- -------------------------------------------------------
+'    10-29-95 GW  Creation
+'    11-07-95 cjs Cleaned up for release
+'    06-10-96 cjs Removed Globals() and newGuiFNB() function definitions.
+'                 SSPRO 1.1 now supports these functions in SSL.
+'    10-31-96 kl  SPR#513
+'    11-04-96 kl  added Set_EC() function definition.
+'    12-04-96 dlr Prepared for 1.1 Release
+'    04-10-97 jh  Fix in HP_Translate
+'    04-29-97 kl  SPR# 654 changed GuiGetInteger() to GuiGetString() to include
+'                 floating points.
+'    01-20-98 drc Added Ascii support Ascii Strings
+'--------------------------------------------------------------------------*/
+// This function will take a return code from a function which has
+// sent or received a message and convert it to a human readable
+// string.
+Translate(Code)
+{
+	switch (Code)
+	{
+	case F_ABRT:
+		return("Failure: Transaction Aborted (SxF0 or S9Fx).");
+		break;
+	case F_DELV:
+		return("Failure: Delivery Message Failed (or SECS-I Retry Count Exceeded).");
+		break;
+	case F_TOED:
+		return("Failure: T3 or T4 Timeout.");
+		break;
+	case S_DELV:
+		return("Message Delivery OK.");
+		break;
+	case S_DONE:
+		return("Message Sent or Reply Received OK.");
+		break;
+	case S_RECV:
+		return("Unexpected Incoming Message OK.");
+		break;
+	default:
+		break;
+	}
+}
+
+
+// This function will convert a host primary (stream and function) message and
+// convert it to a human readable  string.
+HP_Translate(Stream, Function)
+{
+	if( Stream == 1 ) {
+		switch (Function) {
+			   case 1:
+				   return("Are You There");
+				   break;
+			   case 3:
+				   return("Selected Status");
+				   break;
+			   case 11:
+				   return("Status Variable Namelist Request");
+				   break;
+			   case 13:
+				   return("Connect Request");
+				   break;
+			   case 15:
+				   return("Request Offline");
+				   break;
+			   case 17:
+				   return("Request Online");
+				   break;
+			   case 65:
+				   return("(Gem-88) Connect Request");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Host Primary.") );
+				   break;
+
+		}
+	}
+
+	else if( Stream == 2 ) {
+		switch (Function) {
+			   case 13:
+				   return("Equipment Constant Request");
+				   break;
+			   case 15:
+				   return("New Equipment Constant Send");
+				   break;
+			   case 17:
+				   return("Date and Time Request");
+				   break;
+			   case 21:
+				   return("Remote Command");
+				   break;
+			   case 23:
+				   return("Trace Initialize");
+				   break;
+			   case 25:
+				   return("Diagnostic Loopback");
+				   break;
+			   case 27:
+				   return("Initiate Process");
+				   break;
+			   case 29:
+				   return("Equipment Constant Namelist");
+				   break;
+			   case 31:
+				   return("Date and Time Send");
+				   break;
+			   case 33:
+				   return("Define Report");
+				   break;
+			   case 35:
+				   return("Link Event Report");
+				   break;
+			   case 37:
+				   return("Enable/Disable Event Report");
+				   break;
+			   case 39:
+				   return("Inquire/Grant");
+				   break;
+			   case 41:
+				   return("Remote Command");
+				   break;
+			   case 43:
+				   return("Reset Spooling");
+				   break;
+			   case 45:
+				   return("Define Limits");
+				   break;
+			   case 47:
+				   return("Request Limits");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Host Primary.") );                    break;
+		}
+	}
+
+	else if( Stream == 3 ) {
+		switch (Function) {
+			   case 17:
+				   return("S3F17 - Proceed with Carrier");
+				   break;
+			   case 27:
+				   return("AutoToManualReply");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+
+	else if( Stream == 5 ) {
+		switch (Function) {
+			   case 3:
+				   return("Enable/Disable Alarm");
+				   break;
+			   case 5:
+				   return("List Alarms");
+				   break;
+			   case 7:
+				   return("List Enabled Alarms");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Host Primary.") );                    break;
+		}
+	}
+
+	else if( Stream == 6 ) {
+		switch (Function) {
+			   case 15:
+				   return("Event Report Request");
+				   break;
+			   case 17:
+				   return("Annotated Event Report Request");
+				   break;
+			   case 19:
+				   return("Report Request");
+				   break;
+			   case 21:
+				   return("Annotated Report Request");
+				   break;
+			   case 23:
+				   return("Request Spooled Data");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Host Primary.") );                    break;
+		}
+	}
+
+	else if( Stream == 7 ) {
+		switch (Function) {
+			   case 1:
+				   return("Inquire/Grant");
+				   break;
+			   case 3:
+				   return("Process Program Send");
+				   break;
+			   case 5:
+				   return("Process Program Request");
+				   break;
+			   case 17:
+				   return("Process Program Delete");
+				   break;
+			   case 19:
+				   return("Process Program Directory");
+				   break;
+			   case 21:
+				   return("Equipment Process Capabilities");
+				   break;
+			   case 23:
+				   return("Formatted Process Program Send");
+				   break;
+			   case 25:
+				   return("Formatted Process Program Request");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Host Primary.") );                    break;
+		}
+	}
+
+	else if( Stream == 10 ) {
+		switch (Function) {
+			   case 3:
+				   return("Terminal Display, Single");
+				   break;
+			   case 5:
+				   return("Terminal Display, Muiltiblock");
+				   break;
+			   case 9:
+				   return("Broadcast");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Host Primary.") );                    break;
+		}
+	}
+
+	else if( Stream == 13 ) {
+		switch (Function) {
+			   case 1:
+				   return("Send Data Set Sent");
+				   break;
+			   case 3:
+				   return("Open Data Set Request");
+				   break;
+			   case 5:
+				   return("Read Data Set Request");
+				   break;
+			   case 7:
+				   return("Close Data Set Send");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Host Primary.") );                    break;
+		}
+	}
+
+	else
+		return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not recognized.") );
+
+}
+
+
+// This function will convert a equip primary (stream and function) message and
+// convert it to a human readable  string.
+EP_Translate(Stream, Function)
+{
+	if( Stream == 1 ) {
+		switch (Function) {
+			   case 1:
+				   return("Heartbeat");
+				   break;
+			   case 13:
+				   return("(Gem compliant) Connect Request");
+				   break;
+			   case 65:
+				   return("(Gem-88) Connect Request");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+
+		}
+	}
+
+	else if( Stream == 2 ) {
+		switch (Function) {
+			   case 17:
+				   return("Request Date/Time");
+				   break;
+			   case 41:
+				   return("Host Command Send");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+
+	else if( Stream == 3 ) {
+		switch (Function) {
+			   case 17:
+				   return("S3F17 - Proceed with Carrier");
+				   break;
+			   case 27:
+				   return("AutoToManualReply");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+
+	else if( Stream == 5 ) {
+		switch (Function) {
+			   case 1:
+				   return("(GEM compliant) Alarm Report Send");
+				   break;
+			   case 71:
+				   return("(Gem-88) Alarm Report Block Send");
+				   break;
+			   case 73:
+				   return("(Gem-90) Alarm Notification Send");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+
+	else if( Stream == 6 ) {
+		switch (Function) {
+			   case 1:
+				   return("Trace data");
+				   break;
+			   case 3:
+				   return("(non-GEM) Event Report");
+				   break;
+			   case 5:
+				   return("Inquire/Grant");
+				   break;
+			   case 9:
+				   return("(Non/GEM) Event Report");
+				   break;
+			   case 11:
+				   return("(GEM compliant) Event Report ");
+				   break;
+			   case 13:
+				   return("(GEM-90) Annotated Event Report");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+
+	else if( Stream == 7 ) {
+		switch (Function) {
+			   case 1:
+				   return("Inquire/Grant");
+				   break;
+			   case 3:
+				   return("Process Program Send");
+				   break;
+			   case 5:
+				   return("Process Program Request");
+				   break;
+			   case 19:
+				   return("Current EPPD Request");
+				   break;
+			   case 25:
+				   return("Formatted Process Program Request");
+				   break;
+			   case 27:
+				   return("Process Program Verification Send");
+				   break;					   
+			   case 29:
+				   return("Process Program Verification Inquire");
+				   break;				   
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+
+	else if( Stream == 9 ) {
+		switch (Function) {
+			   case 1:
+				   return("Error, Device ID");
+				   break;
+			   case 3:
+				   return("Error, Stream");
+				   break;
+			   case 5:
+				   return("Error, Function");
+				   break;
+			   case 7:
+				   return("Error, Data");
+				   break;
+			   case 9:
+				   return("Error, Transaction Timeout");
+				   break;
+			   case 11:
+				   return("Error, Data Too Long");
+				   break;
+			   case 13:
+				   return("Error, Conversation Timeout");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+
+	else if( Stream == 10 ) {
+		switch (Function) {
+			   case 1:
+				   return("Terminal Request");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+
+	else if( Stream == 13 ) {
+		switch (Function) {
+			   case 1:
+				   return("Send Data Set Send");
+				   break;
+			   case 3:
+				   return("Open Data Set Request");
+				   break;
+			   case 5:
+				   return("Read data Set Request");
+				   break;
+			   case 7:
+				   return("Close Data Set Sound");
+				   break;
+			   case 9:
+				   return("Reset Data Set Send");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+
+	else if( Stream == 14 ) {
+		switch (Function) {
+			   case 9:
+				   return("Create Object Request");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+
+	else if( Stream == 16 ) {
+		switch (Function) {
+			   case 15:
+				   return("PR Job MultiCreate");
+				   break;
+			   case 19:
+				   return("PR Get All Jobs");
+				   break;
+			   case 21:
+				   return("PR Get Space");
+				   break;
+			   default:
+				   return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not a recognized Equipment Primary.") );                    break;
+				   break;
+		}
+	}
+	else
+		return(CatString("S", ToAscii(Stream),"F", ToAscii(Function), " not recognized.") );
+
+}
+
+
+// Here is an example of how to get a filename.  This function has
+// some hard coded defaults to get a file from the sspro directory.
+// You must call this function with File_Stuff already as a
+// GUIGFNB structure, (i.e. File_Stuff = NewStructured(GUIGFNB);)
+GetFileName(File_Stuff)
+{
+	local junkx;
+
+	newGuiGFNB(File_Stuff, "Title", "\\sspro", "Text Files (*.txt),*.txt,Script Files (*.ssl),*.ssl,All Files (*.*),*.*", "*.*" );
+	junkx = GuiGetFileName( File_Stuff );
+	return(junkx);
+}
+
+
+// This is an enhanced Decode function.  If a data item has only one element
+// this function will strip off the last SSL List and return just a single
+// object.  Also a Binary SECS data item "B" returns a string of digits
+// this function will convert that to a number and return that value.
+S2_Decode(Data)
+{
+	Local temp, value;
+	Local temp_format;
+
+	temp_format = GetFormat(Data);
+	temp = Decode(Data);
+	// If we now have a 1 item in a SSL list, pull it out.
+	if (GetCount(temp) == 1)
+	{	//logn("temp = ", temp);
+		// Get the item and set it to an atomic value.
+		temp = GetFirst(temp);
+		//logn("S2_Decode: temp = ", temp);
+		// Convert from string value of a number to the number
+		// Binary data is passed as a string, for example a PPBODY must be
+		// A string, however, A PPBODY will be more than 1 value so we can
+		// safely convert this Binary to a number
+		if (temp_format == "B")
+		{	//logn("B temp = ", temp);
+			// make this an integer, using UNARY +
+			temp = +temp;
+			//logn("Binary: ", temp);
+			//value = ToHex(temp);
+			//logn("hex value: ", value);
+		}
+	}
+
+	if(GetCount(Data) > 1)
+		temp = ToHex(temp);
+	
+	return(temp);
+}
+
+D_Decode(Data)
+{
+	Local i, myValue, myValueList;
+	
+	for(i = 0; i < GetCount(Data); i = i + 1)
+	{		
+		myValue = Data[i];
+		logn("myValue = ", myValue);
+		
+		myDecodeValue = decode(myValue.Text);
+		
+		logn("myDecodeValue = ", myDecodeValue);
+		
+		myValueList = InsertFirst(myDecodeValue, myValueList);
+		return (Reverse(myValueList));
+	}
+}
+
+// This program is used to test out the S2_Decode function
+// Test_S2_Decode()
+// {
+	// Local msg, Data, COMMACK;
+
+	// msg = NewMessage(1, 14);
+	// msg.text =
+		// <L
+		// <B 0x00>   // COMMACK
+		// <L>
+		// >;
+
+	// Data = S2_Decode(msg.text);
+	// logn("Data has ", GetCount(Data), " elements");
+
+	// logn("Data= ", Data, ".");
+
+	// COMMACK = S2_Decode(Data[0]);
+
+	// dump(COMMACK);
+
+	// logn("COMMACK=0x", ToHex(COMMACK));
+// }
+
+
+//SPR#513
+// Get_Vid() : Get a Vid from user and query Equipment
+// This function will give an example of querying the user for a VID
+// number, then sends 2 messages to the equipment and then writes
+// a report.
+_Get_Vid_ ()
+{
+	local why;
+	local vid;
+	local msg;
+	local list2;
+	local svid;
+	local list1;
+	local svname;
+	local units;
+	local sv;
+
+	// get a VID from the operator
+	vid = GuiGetInteger("Please input a Variable ID: ");
+
+	// Send S1F11, NameList Request
+	msg = SendPrimary (
+		<S1F11 W
+		<L
+		<U4 vid>    /* Variable ID */
+		>
+		>);
+
+	// Waiting for S1F12 reply
+	Wait(msg);
+
+	if (msg.status != S_DONE)
+	{
+		Comm_Fail();
+	}
+
+	// This will give us a SSL List with (<L <U4 svid> <A svname> <A units>>)
+	list1  = Decode(msg.text);      // removes outer list.
+
+	// This should get the number of items in the SECS List from the SSL List1
+	if (GetCount(list1[0]) == 0)
+	{
+		// If there were no items, that means we got back an empty list!
+		script_erro(" No Such Variable ID");
+	}
+
+	// Let's pull away the next layer of the onion, remove the SECS List
+	list2  = Decode(list1[0]);
+
+	// We now have a SSL List with 3 items (<U4 svid>, <A svname>, <A units>)
+	svid   = Decode(list2[0]);      // <U4 svid>
+	svname = Decode(list2[1]);      // <A svname>
+	units  = Decode(list2[2]);      // <A units>
+
+	// Send S1F3 Selected Status Request
+	msg = SendPrimary (
+		<S1F3 W
+		<L
+		<U4 vid>
+		>
+		>);
+
+
+	// Wait for Reply message (S1F14)
+	Wait(msg);
+
+	/* Reply to S1F3 from the host */
+	listA = decode(msg.Text);
+	s1f3_svids = S2_Decode(listA[0]);  // first SVID
+	if (s1f3_svids == 16777554 || s1f3_svids == 16777810 || s1f3_svids  == 16778066)
+	{
+		Reply = SendReply(msg, OnlyPortStatusReply);
+		Reply = wait(Reply);  
+	}
+	else if (s1f3_svids == 37880233)
+	{
+		Reply = SendReply(msg, ChamberStatusReply);
+		Reply = wait(Reply);     
+	}  	
+	else if (msg.status != S_DONE)
+	{
+		Comm_Fail();
+	}	
+	//	    else
+	//            {
+	//	        Reply = SendReply(Msg, IdlePortStatusReply);
+	//                Reply = wait(Reply);     
+	//            }  
+
+
+
+	// We now have the data in an S1F4
+	list1 = Decode(msg.text);
+
+	// Decode gave us a SSL list with one item ( <U4 SV> )
+	sv = list1[0];
+
+	log ("--------------- SCRIPT RESULTS --------------\n",
+		"Variable ID: ", vid, "\n",
+		"Name:        ", svname, "\n",
+		"Units:       ", units, "\n",
+		"Format:      ", GetFormat(sv), "\n",
+		"Value:       ", sv, "\n",
+		"--------- SCRIPT COMPLETED NORMALLY ---------\n");
+}
+
+
+//SPR#513
+//Set_EC() : Prompts for an EC from the user and then sends the S2F29 and waits for
+//the response.  Then prompts for a new value and sends the S2F15.
+//Then prints the data to a MsgBox and waits for the
+//user to acknowledge it.
+//
+// Modified by Gordon to accept Boolean values, misc. formatting changes Nov.15/96
+//
+
+Set_EC()
+{
+	local why;
+	local vid, newECval, ECval;
+	local msg;
+	local list2;
+	local svid;
+	local list1;
+	local svname;
+	local units;
+	local sv;
+	local answer;
+	local stringobj;
+
+	// get a EC vid from the operator
+	vid = GuiGetInteger("Please input a EC id: ");
+
+	// Send S2F29, Equipment Constant Namelist request
+	msg = NewMessage (2, 29, 1, <L
+		<U4 vid>      /* vid */
+	>);
+
+	msg = SendPrimary (msg);
+
+	// Waiting for S2F30 reply
+	Wait(msg);
+
+	if (msg.status != S_DONE)
+	{
+		Comm_Fail();
+		Return;
+	}
+
+	// This will give us a SSL List with (<L <U4 svid> <A svname> <U2 min> <U2 max>
+	//                                          <U2 default> <A units>)
+	list1  = Decode(msg.text);      // removes outer list.
+
+	// This should get the number of items in the SECS List from the SSL List1
+	if (GetCount(list1[0]) == 0)
+	{
+		// If there were no items, that means we got back an empty list!
+		script_erro(" No Such Equipment Constant ID");
+	}
+
+	// Let's pull away the next layer of the onion, remove the SECS List
+	list2  = Decode(list1[0]);
+
+	// We now have a SSL List with 6 items (<L <U4 svid> <A svname> <U2 min> <U2 max>
+	//                                          <U2 default> <A units>)
+	svid   = Decode(list2[0]);      // <U4 svid>
+	svname = Decode(list2[1]);      // <A svname>
+	min    = Decode(list2[2]);      // <U2 min>
+	max    = Decode(list2[3]);      // <U2 max>
+	defaul = Decode(list2[4]);      // <U2 default>
+	units  = Decode(list2[5]);      // <A units>
+
+	// Send S2F13 New Equipment constant
+	msg = NewMessage(2, 13, 1, <L
+		<U4 vid> >);
+	msg = SendPrimary( msg );
+
+	// Wait for Reply message (S2F14)
+	Wait(msg);
+	if (msg.status != S_DONE)
+	{
+		Comm_Fail();
+		Return;
+	}
+
+	// We now have the data in an S2F14
+	list1 = Decode(msg.text);
+
+	// Decode gave us a SSL list with one item ( <U4 SV> )
+	sv = list1[0];
+
+	// get a EC value from the operator
+	// SPR #654
+	If(GetFormat(sv) == "BOOLEAN")
+	{
+		stringobj = GuiGetInteger("Please input a BOOLEAN value: 0 for False, 1 for True");
+		newECval = AToI( stringobj );
+	}
+	else  If(GetFormat(sv) == "F4" || GetFormat(sv) == "F8" )
+	{
+		stringobj = GuiGetString(CatString("Please input a new EC \"", GetFormat(sv), "\" floating point value: "));
+		newECval = AToR( stringobj );
+	}
+	else If(GetFormat(sv) == "A" )
+	{
+		// Added 1-20-98 to support ASCII strings
+		stringobj = GuiGetString(CatString("Please input a new EC \"", GetFormat(sv), "\" ASCII value: "));
+		newECval =stringobj;
+	}
+	else
+	{
+		stringobj = GuiGetString(CatString("Please input a new EC \"", GetFormat(sv), "\" Integer value: "));
+		newECval = AtoI(stringobj);
+	}
+
+
+	// message confirm with user
+	answer = GuiMsgBox("Confirming action",
+		Catstring("Caution:\n you are about to set a new value for ECvid ", ToAscii(vid),
+		" !"), 1);
+
+	if( answer == 2 )   /* cancel button press */
+		script_erro(" Operator Aborted! ");
+
+	ECval=CatString("S2_", GetFormat(sv)) (newECval);
+
+	// Send S2F15 New Equipment constant
+	msg = NewMessage(2, 15, 1, <L  /* set value */
+		< L <U4 vid> <ECval>> >);
+	msg = SendPrimary( msg );
+
+	// Wait for Reply message (S2F16)
+	Wait(msg);
+	if (msg.status != S_DONE)
+	{
+		Comm_Fail();
+		Return;
+	}
+
+	// We now have the data in S2F16
+	ack = Decode(msg.text);
+	if( ack[0] != 0 )               /* ack code is non-zero */
+		script_erro (" Error, return code for new equipment constant send (S2F15) is non zero. ");
+
+
+	log ("--------- SET EQUIPMENT CONSTANT RESULTS --------\n",
+		"Variable ID: ", vid, "\n",
+		"SVname:      ", svname, "\n",
+		"Min:         ", min, "\n",
+		"Max:         ", max, "\n",
+		"Default:     ", defaul, "\n",
+		"Units:       ", units, "\n",
+		"Format:      ", GetFormat(sv), "\n",
+		"Old Value:   ", Decode(sv), "\n",
+		"New Value:   ", newECval, "\n",
+		"----------- SCRIPT COMPLETED NORMALLY -----------\n");
+}
+
+
+
+// Called when script Fails
+script_erro (why)
+{
+	log ("--------------- SCRIPT RESULTS --------------\n",
+		why, "\n",
+		"--------------- SCRIPT FAILED ---------------\n");
+	abort();
+}
+
+
+
+// Called when communication Fails
+Comm_Fail ()
+{
+	script_erro (" Communication Failure");
+}
+
+/*--------------------------------------------------------------------------
+' File:       utils2.ssl                                Date: 12-04-96
+'
+' Function(s):    (WWW example scripts)
+'   wait_for_equipment_dataset_download  : Stream 13 test
+'   host_initiated_upload_datasets       : Stream 13 test
+'   wait_for_equipment_initiated_upload_dataset : Stream 13 test
+'   send_events             : Simulate an equipment sending events          
+'   Test_S1F2               : Show how to use SendDiagnostic
+'   Build_Reports_S2F33     : Build S2F33's based on user input
+'   Smart_GetFormat         : Get the format of a specific data item
+'   Smart_Decode            : Decode SECS messages by data item!!!
+'   test_smart_decode       : Examples of decoding messages
+'   Specific_Message_Check  : A quick check for specific incoming message
+'   Full_Decode             : Completely decode a message into an SSL List
+'   test_Full_Decode        : Test the Full Decode script
+'   PopupGuiMsgBox          : Pop's up a box which can be taken down
+'   TakeDownGuiMsgBox       : Takes down a popped up box
+'   SpecialGuiMsgBox        : Used by Popup_GuiMsgBox
+'
+' Description:
+'    This file has some sample utilities that may be useful to several
+'    projects.
+'
+' Author(s):
+'    GW Associates Staff, (cjs)
+'
+' Cautions:
+'
+' Mods:
+'    Date     Who Description
+'    -------- --- -------------------------------------------------------
+'    12-04-96 dlr Prepared for 1.1 Release
+'    02-03-97 cjs CKPNT value== 0 in host_initiated_upload_datasets()
+'                 Also added this header comment.
+'    10-13-97 cjs Add code to write data to a file in the script 
+'                 host_initiated_upload_datasets
+'   10-16-97 cjs Added PopUpGuiMsgBox, TakeDownGuiMsgBox and  
+'                SpecialGuiMsgBox.  These help put up temporary GuiMsgBox's.
+'--------------------------------------------------------------------------*/
+
+
+// ---------------------------------------------------------------------
+// This short script demonstrates how to use the SendDiagnostic
+// message to send any SECS you want.  SECSIM Pro does not try
+// to modify the outgoing message in any way.
+// In this case we are sending a S1F2 to the other side of the
+// link with a Wbit set to 1.  This obviously violates the SECS
+// standard, but has been witnessed in some SECS interfaces.  This
+// script would be executed when an S1F1 message comes in by renaming
+// it to S1F2 and then loading it after all SML files have been loaded
+// so that the SECSIM() function will call this function instead
+// of sending the S1F2 from the SML file.
+// Cautions:
+// If you do rename the function to S1F2 to perform this test make
+// sure to rename the function back to something else and reload the
+// SML file with S1F2 defined.
+// ---------------------------------------------------------------------
+Test_S1F2 ( msg )
+{
+
+	Local outmsg;
+
+	// Create an object to send back as the reply
+	outmsg = NewMessage();
+
+	// make it an exact copy of the incoming message
+	outmsg = DupStructured(msg);
+
+	// set the function field so that it is the response message
+	outmsg.function=2;
+
+	// ensure that the Wbit is a 1 !!
+	outmsg.Wbit = 1;
+
+	// dump the HEX so I can verify it in the log file.
+	dump(msg, outmsg);
+
+	// send the message to the other end of the link
+	msg = SendDiagnostic( outmsg );
+}
+
+
+
+// ---------------------------------------------------------------------
+// Description:
+//   This file contains a function which will return a specific format
+//   from a SECS data item.  This is so that the user doesn't need to
+//   call Decode over and over and over to get the data they want.
+//   The Arguments are:
+//       1.  The Message Text
+//       2.  Followed by a possible series of more than one number which
+//           specify the data to extract from the message:
+//           To obtain the data desired, call the function in the
+//           following way:
+//
+//           msg.text =
+//               <L
+//                   <U1 1>         // Smart_GetFormat (msg.text, 1);
+//                   <U2 3 5 3 1>   // Smart_GetFormat (msg.text, 2);
+//                   <L             // Smart_GetFormat (msg.text, 3);
+//                       <U2 1>     // Smart_GetFormat (msg.text, 3, 1);
+//                       <A "Hi">   // Smart_GetFormat (msg.text, 3, 2);
+//                   >
+//               >.
+//
+//   Note: Call with a "1" returns a S2_U1.
+//   Note: Call with a "2" returns a S2_U2.
+//   Note: Call with a "3" returns a S2_L.
+//   Note: Call with a "3, 1" returns a S2_U2.
+//   Note: Call with a "3, 2" returns a S2_A.
+//
+// Author(s):
+//   GW Associates Staff, (dr, cjs)
+//
+// Cautions:
+//   The text body of the message MUST start with a SECS List type.
+//   In other words you would NOT use this function if the response
+//   message was <B 0x0>.  Just use S2_Decode() in utils.ssl.
+// ---------------------------------------------------------------------
+Smart_GetFormat()
+{
+	Local value;
+	Local format;  // new for GetFormat: cjs
+	Local count;
+	Local ii;
+
+	// First check to see if the user passed in any data at all
+	// as the first parameter
+	If(!GetCount(ArgList[0]))
+	{
+		GuiMsgBox("Smart_Decode", "The Smart_Decode() function received "
+			"msg.text with no data.  The calling function must have "
+			"received an unexpected message format.",
+			MB_OK | MB_ICONEXCLAMATION);
+
+		return(NewList());
+	}
+
+	// Determine how many arguments we have?
+	count = GetCount(ArgList);
+
+	// Since this function should only be called with a LIST of data then we
+	// must remove that layer of the msg.text
+	value = Decode(ArgList[0]);
+
+	// Loop through the message and grab the correct part.
+	for(ii = 1; ii < count; ii = ii + 1)
+	{
+		If(!IsEmptyList(value))
+		{
+			If(IsSECS(value[ (ArgList[ii]-1) ]))
+			{
+				format = GetFormat(value[ (ArgList[ii]-1) ]);
+			}
+			value = Decode(value[ (ArgList[ii]-1) ]);
+		}
+		Else
+		{
+			break;
+		}
+	}
+	return(format);
+}
+
+// ---------------------------------------------------------------------
+// Description:
+//   This file contains a function which will pull out a particular item
+//   from a SECS message.  This is so that the user doesn't need to call
+//   Decode over and over and over to get the data they want.
+//   The Arguments are:
+//       1.  The Message Text
+//       2.  Followed by a possible series of more than one number which
+//           specify the data to extract from the message:
+//           To obtain the data desired, call the function in the
+//           following way:
+//
+//           msg.text =
+//               <L
+//                   <U1 1>         // Smart_Decode (msg.text, 1);
+//                   <U2 3 5 3 1>   // Smart_Decode (msg.text, 2);
+//                   <L             // Smart_Decode (msg.text, 3);
+//                       <U2 1>     // Smart_Decode (msg.text, 3, 1);
+//                       <A "Hi">   // Smart_Decode (msg.text, 3, 2);
+//                   >
+//               >.
+//
+//   Note: Call with a "1" returns a 1.
+//   Note: Call with a "2" returns a SSL List: ( 3, 5, 3, 1)
+//   Note: Call with a "3" returns a SSL list of SECS data items: ( <U2 1>, <A "Hi"> )
+//   Note: Call with a "3, 1" returns a 1.
+//   Note: Call with a "3, 2" returns a "Hi".
+//
+// Author(s):
+//   GW Associates Staff, (dr, cjs)
+// Cautions:
+//   The text body of the message MUST start with a SECS List type.
+//   In other words you would NOT use this function if the response
+//   message was <B 0x0>.  Just use S2_Decode() in utils.ssl.
+// ---------------------------------------------------------------------
+Smart_Decode()
+{
+	Local value;
+	Local count;
+	Local ii;
+	Local jj;
+	Local isB;
+	Local format;
+
+	isB = FALSE;
+	isL = FALSE;
+
+	// First check to see if the user passed in any data at all
+	// as the first parameter
+	// If(!GetCount(ArgList[0]))
+	// {
+		// GuiMsgBox("Smart_Decode", "The Smart_Decode() function received "
+			// "msg.text with no data.  The calling function must have "
+			// "received an unexpected message format.",
+			// MB_OK | MB_ICONEXCLAMATION);
+
+		// return(NewList());
+	// }
+
+	// Determine how many arguments we have?
+	count = GetCount(ArgList);
+	//logn("count: ", count);
+	// Since this function should only be called with a LIST of data then we
+	// must remove that layer of the msg.text
+	value = Decode(ArgList[0]);
+	//logn("value: ", value);
+	// Loop through the message and grab the correct part.
+	for (ii = 1; ii < count; ii = ii + 1)
+	{
+		If (!IsEmptyList(value))
+		{
+			If (IsSECS(value[ (ArgList[ii]-1) ]))
+			{
+				format = GetFormat(value[ (ArgList[ii]-1) ]);
+
+				If ( format == "B")
+				{
+					isB = TRUE;
+				}
+				Else
+				{
+					isB = FALSE;
+				}
+			}
+			value = Decode(value[ (ArgList[ii]-1) ]);
+			//logn("Updating value: ", value);
+		}
+		Else
+		{
+			break;
+		}
+	}
+
+	// Before we return make sure we format the data correctly
+	If(!IsEmptyList(value))
+	{
+		// If it is a single data item, then pull data out
+		// of the SSL list, otherwise return an SSL list of data
+		if ((GetCount(value) == 1) && (format != "L"))
+		{
+			value = GetFirst(value);
+			If(isB) value = +value;
+		}
+	}
+	return(value);
+}
+
+// This can be run to test the Smart_Decode Call
+test_smart_decode()
+{
+	msg = NewMessage(6,1,1);
+
+	msg.text =
+		<L
+		<U1 1>         // Smart_Decode (msg.text, 1);
+		<U4 3 5 3 1>   // Smart_Decode (msg.text, 2);
+		<L             // Smart_Decode (msg.text, 3);
+		<U2 1>     // Smart_Decode (msg.text, 3, 1);
+		<A "Hi">   // Smart_Decode (msg.text, 3, 2);
+		>
+		>;
+
+	dump(Smart_Decode (msg.text, 1));
+	dump(Smart_Decode (msg.text, 2));
+	dump(Smart_Decode (msg.text, 3));
+	dump(Smart_Decode (msg.text, 3,1));
+	dump(Smart_Decode (msg.text, 3,2));
+}
+
+// ---------------------------------------------------------------------
+// This will examine the passed in message and determine if it is the 
+// desired SECS message
+// ---------------------------------------------------------------------
+Specific_Message_Check(the_msg, desired_stream, desired_function)
+{
+	if ((the_msg.stream == desired_stream) && (the_msg.function == desired_function) )
+		return(TRUE);
+	else
+		return(FALSE);
+
+}
+
+// ---------------------------------------------------------------------
+// This function will take the .text portion of a SECS message object
+// and break out every part of the SECS message and it will then store
+// the data into a SSL List and return that to the calling application
+// The calling application can then break out the data per data item
+// ---------------------------------------------------------------------
+FullDecode ( Text )
+{
+	Local Format;
+	Local TextFinal;
+
+	// make sure it is a list data element, if not just decode and return.
+	if ("L" == GetFormat( Text )) 
+	{
+		Text = Reverse( Decode( Text ) );
+		TextFinal = NewList();
+
+		while (Text) 
+		{
+			TextFinal = InsertFirst( FullDecode( Text[0] ), TextFinal );
+			Text = RemoveFirst( Text );
+		}
+
+		return( TextFinal );
+	}
+	else   // it's just a single data element so return the decoded value.
+	{
+		return( Decode( Text ) );
+	}
+}
+
+
+// ---------------------------------------------------------------------
+// This will test the function that decodes complete SECS Messages
+// Remember that the data will come back in an SSL list, so I have
+// 2 different examples of dump() statements showing what is in the 
+// SSL List.
+// ---------------------------------------------------------------------
+Test_FullDecode ()
+{
+	local msg;
+
+	msg = NewMessage( S10F5 ); 
+	msg.text = 
+		<L 
+		<B 0x0>
+		<L 
+		<A "line 1"> 
+		<A "Line 2"> 
+		>
+		>;
+
+	// Parse out the data from the .text field
+	T = FullDecode( msg.text );
+
+	// Here is what it should look like, (in this case)
+	// when we are done.
+	// SSL List ( 0, ( "Line 1", "Line 2") )
+
+	// This sequence leaves the DataItem Array as an SSL List ()
+	dump( T[0] );    // prints out an SSL list with a zero in it
+	dump( T[1][0] ); // prints out an SSL list with "Line 1"
+	dump( T[1][1] ); // prints out an SSL list with "Line 2"
+
+	// This sequence pulls out the first DataItem from each part 
+	// of the returned list
+	dump( T[0][0] );    // prints out a 0
+	dump( T[1][0][0] ); // prints out "Line 1"
+	dump( T[1][1][0] ); // prints out "Line 2"
+}
+// ----------------------------------------------------------------------
+// This function will pop up a GUI message Box.
+// It is then the responsibility of the caller to take down the
+// message box my calling TakeDown_GuiMsgBox with the correct
+// task ID that is returned from this script.
+// 
+// The last parameter, timeout, if specified will take the box
+// down after the timeout is reached, if the caller does not
+// send a timeout value or uses 0, then it is the responsibility
+// of the caller to call TakeDown_GuiMsgBox
+// ----------------------------------------------------------------------
+PopupGuiMsgBox(Title, Message, Button_Codes, Timeout)
+{
+	Local Run_ID;
+
+	Run_ID = Run(SpecialGuiMsgBox, 
+		NewList(Title, Message, Button_Codes));
+
+	// If the Timeout value is non-zero then
+	// start a task that will wait the duration of the Timeout
+	// and abort the task we just started...
+	if (Timeout)
+	{
+		Run (TakeDownGuiMsgBox, NewList(Run_ID, Timeout));
+	}
+
+	Return(Run_ID);       
+}            
+
+// ----------------------------------------------------------------------
+// Used only by Popup_GuiMsgBox becuase you can use SSL keywords
+// in the Run command when you start a separate task as a new
+// thread.
+// ----------------------------------------------------------------------
+SpecialGuiMsgBox(Title, Message, Button_Code)   
+{
+	while(1)
+	{
+		GuiMsgBox(Title, Message, Button_Codes + MB_FLOATING_WINDOW);
+	}
+}
+
+// ----------------------------------------------------------------------
+// This is either called by the user or by the PopUp_GuiMsgBox.
+// If a Timeout value is specified to the routine, it will wait
+// that long BEFORE taking down the GuiMsgBox that was popped
+// up and associated with the ID value.
+// ----------------------------------------------------------------------
+TakeDownGuiMsgBox(ID, Timeout)
+{
+	// if Timeout is non-zero wait that long and then Abort task
+	// This is a good way to check also, becuase if the second
+	// parameter Timeout is not sent to this function it will be
+	// set to an EMPTY SSL List which, along with 0, will fail
+	// the following IF statement.
+	if (Timeout)
+	{
+		Wait(NewTimer(Timeout));
+	}
+
+	Abort(ID);
+}
+
+//SPR#513
+// Get_Vid() : Get a Vid from user and query Equipment
+// This function will give an example of querying the user for a VID
+// number, then sends 2 messages to the equipment and then writes
+// a report.
+Get_Vid ()
+{
+    local why;
+    local vid;
+    local msg;
+    local list2;
+    local svid;
+    local list1;
+    local svname;
+    local units;
+    local sv;
+
+    // get a VID from the operator
+    vid = GuiGetInteger("Please input a Variable ID: ");
+
+    // Send S1F11, NameList Request
+    msg = SendPrimary (
+          <S1F11 W
+              <L
+                  <U4 vid>    /* Variable ID */
+              >
+          >);
+
+    // Waiting for S1F12 reply
+    Wait(msg);
+
+    if (msg.status != S_DONE)
+    {
+        Comm_Fail();
+    }
+
+    // This will give us a SSL List with (<L <U4 svid> <A svname> <A units>>)
+    list1  = Decode(msg.text);      // removes outer list.
+
+    // This should get the number of items in the SECS List from the SSL List1
+    if (GetCount(list1[0]) == 0)
+    {
+        // If there were no items, that means we got back an empty list!
+        script_erro(" No Such Variable ID");
+    }
+
+    // Let's pull away the next layer of the onion, remove the SECS List
+    list2  = Decode(list1[0]);
+
+    // We now have a SSL List with 3 items (<U4 svid>, <A svname>, <A units>)
+    svid   = Decode(list2[0]);      // <U4 svid>
+    svname = Decode(list2[1]);      // <A svname>
+    units  = Decode(list2[2]);      // <A units>
+
+    // Send S1F3 Selected Status Request
+    msg = SendPrimary (
+          <S1F3 W
+              <L
+                  <U4 vid>
+              >
+          >);
+
+    // Wait for Reply message (S1F14)
+    Wait(msg);
+    if (msg.status != S_DONE)
+    {
+        Comm_Fail();
+    }
+
+    // We now have the data in an S1F4
+    list1 = Decode(msg.text);
+
+    // Decode gave us a SSL list with one item ( <U4 SV> )
+    sv = list1[0];
+
+    log ("--------------- SCRIPT RESULTS --------------\n",
+         "Variable ID: ", vid, "\n",
+         "Name:        ", svname, "\n",
+         "Units:       ", units, "\n",
+         "Format:      ", GetFormat(sv), "\n",
+         "Value:       ", sv, "\n",
+         "--------- SCRIPT COMPLETED NORMALLY ---------\n");
+}

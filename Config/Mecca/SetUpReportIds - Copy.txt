@@ -1,0 +1,58 @@
+//
+//	Scripted by THINH NGUYEN
+//  File: ReportIds.txt
+//	Version: 1.0
+//	Date: Sat Mar 17 01:52:46 2018
+//
+// WARNING!!! DO NOT EDIT without reading first.
+// This file should contains all ReportIds used by your Tool or Host.
+// All comments should follow the format being used and seen.
+// Each field should be separated by a white space
+// Data in each field should be separated by a comma (w/o space)
+// The last line should be an empty line.
+//
+// This is a typical way to express an RPTID.
+//   rptid		is a number of the REPORT
+//   rptname	is name of the REPORT
+//   vids		is an SSL list of vids (use comma separator, no space allowed)
+//   vidnames	is a name list of vids (use comma separator, no space allowed)
+//   values		is a value list of vids (Single NA is ok; otherwise use comma separator, no space allowed)
+//
+// rptid(unique)  rptname(single)  vids(single/multiple)  vidnames(single/multiple  values(NA by default)
+//
+101 ProcessStateReport 100000037,100000036 PROCESSSTATE,PREVIOUSPROCESSSTATE NA
+102 PortIDReport 200000087,200220079 PortID,AccessMode NA
+103 LocationIDReport 200000080,200000077,200000087 LocationID,CarrierID,PortID NA
+104 PortTransferStateReport 200000087,200220086 PortID,PortTransferState NA
+105 CarrierIDReport 200000077 CarrierID NA
+106 MaterialReport 200000087,200000077 PortID,CarrierID NA
+107 SlotMapReasonReport 200000087,200000077,200000103,200000107 PortID,CarrierID,Reason,SlotMap NA
+108 CJIDReport 200000114 CJobID NA
+109 PJIDReport 200000033,200000034,200000149 PJobID,PJobState,RecVariableList NA
+110 PJStateReport 200000033,200000034 PJobID,PJobState NA
+111 SubStrateStatusReport 200000109,200000110,200000111,200000112,200000113,200000033,200000115 SubstrateID,SubstLocId,SubstProcState,SubstState,LotID,PJobID,SubstHistory NA
+112 SubStrateLocationReport 200000109,200000110,200000170 SubstrateID,SubstLocId,SubstLocState NA
+113 OperatorCommandReport 200000140 OperatorCommand NA
+114 AlarmInfoReport 200000023,200000024,200000025,200000026,200000027 AlarmID,AlarmSeverity,AlarmCategory,AlarmSubCategory,AlarmText NA
+115 PortInfoReport 200000087,200000080,200000077 PortID,LocationID,CarrierID NA
+116 PortAssociationStateReport 200000087,200000077,200220126 PortID,CarrierID,PortAssociationState NA
+117 CarrierAccessingStatusReport 200000087,200000077,200000142 PortID,CarrierID,CarrierAccessingState
+118 PortTransferStateReport 200000087,200220086,200000077 PortID,PortTransferState,CarrierID NA
+119 ECIDChangedReport 200000041 GemECIDChanged NA
+120 AlarmIDReport 200000023 AlarmID NA
+121 PPChangeReport 200000043,200000044 PPChangeName,PPChangeStatus NA
+122 EPTModuleStatusReport 200000171,200000172,200000173 EPTModuleName,EPTState,EPTPreviousState NA
+123 SubstLocStateReport 200000110,200000170 SubstLocId,SubstLocState NA
+124 CarrierLocationReport 200000080,200000077 LocationID,CarrierID NA
+125 LoadPortReport 200000087 PortID NA
+126 LotInfoReport 200000109,200000110,200000111,200000112,200000113 SubstrateID,SubstLocId,SubstProcState,SubstState,LotID NA
+127 PortReservationStateReport 200000087,200000077,200220190 PortID,CarrierID,PortReservationState NA
+
+// 128 200000300,200000301,200000302,200000303,200000304
+// 401 200000181
+// 402 200000182
+// 403 200000183
+// 404 200000184
+// 500 200000200,200000201,200000202,200000203,200000204,200000205,200000206,200000207,200000208,200000209
+// 501 200000210,200000211,200000212,200000213,200000214,200000215,200000216,200000217,200000218
+// 502 130000210,130000211,130000212,130000213,130000214,130000215,130000217,130000218,130000219,130000220,130000221,130000222,130000223,130000226,130000227,130000228,130000229,130000230,130000231,130000232,130000233,130000236,130000237,130000238,130000239,130000240,130000241,130000242,130000243,130000246,130000247,130000248,130000249,120000200,120000201,120000202,120000203,120000206,120000207,120000208,120000209,121000200,121000201,121000202,121000203,121000206,121000207,121000208,121000209,102000200,102000201,102000202,102000203,102000204,102000205,102000206,102000207,102000208,102000209,104000200,104000201,104000202,104000203,104000204,104000205,104000206,104000207,104000208,104000209

@@ -1,0 +1,5424 @@
+/*
+*   File: ASM-Host.ssl       
+*	Version: 1.0        
+*	Date: Feb 12, 2018
+*	Scripted by THINH P NGUYEN 
+*/
+
+/*------------------------------------------------------------------------
+This is a typical S6F11 data structure
+
+Format:
+	{L:3 
+		DATAID 
+		CeId 
+		{L:a 
+			{L:2 
+				RPTID 
+				{L:b 
+					V 
+				}
+			}
+		}
+	}
+	
+------------------------------------------------------------------------*/
+Structure S6F11_STRUCT ( dataId, CeId, reportList );
+
+////////////////////////////////////////////////////////
+// NTSC requests S1F1. Simulator replies S1F2 to NTSC.
+///////////////////////////////////////////////////////
+_S1F2_(S1F1Msg)
+{
+    logn("Thinh -> S1F2_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+	SendReply(S1F1Msg, S2_L()); 
+    logn("Thinh <- S1F2_Reply()");	
+}
+
+//////////////////////////////////////////////////////
+// NTSC requests S1F3. Simulator replies S1F4 to NTSC.
+/////////////////////////////////////////////////////
+_S1F4_(S1F3Msg)
+{
+	local S1F3List, mListSize, mVIDList, mVID, mFormat, mValue, i, ii;	
+    logn("Thinh -> S1F4_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    S1F3List = decode(S1F3Msg.Text);
+	logn("Thinh - S1F3List = ", S1F3List);
+	mListSize = GetCount(S1F3List);
+	mVIDList = NewList();
+	
+	for (i = mListSize - 1; i >= 0; i = i - 1)
+	{
+		mVID		= S2_Decode(S1F3List[i]);
+		mFormat 	= GetForMat(S1F3List[i]);
+		logn("Thinh - mVID = ", mVID, ", mFormat = ", mFormat);
+		
+		switch(mFormat)
+		{
+			case "B": 
+				mVIDList = InsertFirst(S2_B(mValue), mVIDList);
+				break;
+			case "J": 
+				mVIDList = InsertFirst(S2_J(mValue), mVIDList);
+				break;
+			case "I1": 
+				mVIDList = InsertFirst(S2_I1(mValue), mVIDList);
+				break;
+			case "I2": 
+				mVIDList = InsertFirst(S2_I2(mValue), mVIDList);
+				break;
+			case "I4": 
+				mVIDList = InsertFirst(S2_I4(mValue), mVIDList);
+				break;
+			case "I8": 
+				mVIDList = InsertFirst(S2_I8(mValue), mVIDList);
+				break;
+			case "U1": 
+				break;
+			case "U2": 
+				mVIDList = InsertFirst(S2_U2(mValue), mVIDList);
+				break;
+			case "U4": 
+				if (mVID == 952)
+					mVIDList = InsertFirst(S2_U1(5), mVIDList);
+				else if (mVID == 955)			
+					mVIDList = InsertFirst(S2_U1(7), mVIDList);				
+				else if (mVID == 1531 || mVID == 1532)
+					mVIDList = InsertFirst(S2_U2(2), mVIDList);
+				else if (mVID == 2300010000)
+					mVIDList = InsertFirst(S2_BOOLEAN(True), mVIDList);					
+				else if (	mVID == 2300200103 || mVID == 2300200203 || mVID == 2300200303 || mVID == 2300200403 || mVID == 2300200406 || mVID == 2300200503 ||
+							mVID == 2300200506 || mVID == 2300200601 || mVID == 2300200602 || mVID == 2300200701 || mVID == 2300200702 || mVID == 2300200703 || 
+							mVID == 2300200704 || mVID == 2300200705 || mVID == 2300200706 || mVID == 2300200707 || mVID == 2300201601  )
+					mVIDList = InsertFirst(S2_U4(4), mVIDList);
+				else if (mVID == 1589)
+				{					
+					for (ii = 0; ii < 4; ii = ii + 1)
+					{
+						mStr = "Load Port";
+						mList = NewList();
+						
+						if ( ii == 2 || ii == 3 )
+							mStr = CatString(mStr, " 1");
+						else 
+							mStr = CatString(mStr, " 2");
+							
+						if ( ii == 0 || ii == 2 )
+							mStr = CatString(mStr, " - Docked");
+						else 
+							mStr = CatString(mStr, " - Undocked");	
+
+						mList = InsertFirst(S2_A(), mList);
+						mList = InsertFirst(S2_A(mStr), mList);	
+						mVIDList = InsertFirst(S2_L(mList), mVIDList);	
+					}
+				}
+				else
+					mVIDList = InsertFirst(S2_U4(999999), mVIDList);
+				
+				break;
+			case "U8": 
+				mVIDList = InsertFirst(S2_U8(mValue), mVIDList);
+				break;
+			case "F4": 
+				mVIDList = InsertFirst(S2_F4(mValue), mVIDList);
+				break;
+			case "F8": 
+				mVIDList = InsertFirst(S2_F8(mValue), mVIDList);
+				break;
+			case "BOOLEAN": 
+				mVIDList = InsertFirst(S2_BOOLEAN(mValue), mVIDList);
+				break;
+			case "L":
+				mVIDList = InsertFirst(S2_L(mValue), mVIDList);
+				break;
+			default:
+				break;
+			
+		}
+	}
+
+	SendReply(S1F3Msg, S2_L(mVIDList)); 	
+    
+    logn("Thinh <- S1F4_Reply()");
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S1F11. simulator replies S1F12 to NTSC. VID Name List Request/Reply
+///////////////////////////////////////////////////////
+_S1F12_(S1F11Msg)
+{
+    local S1F11List;    
+    logn("Thinh -> S1F12_Reply()"); 
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+	S1F11List = decode(S1F11Msg.Text);
+	
+	if (GetCount(S1F11List) == 0)
+	{
+		logn( "Thinh - All Status Variable Name List Reply" );
+		SendReply(S1F11Msg, S2_B(0));
+	}	
+	else if (GetCount(S1F11List) == 2)
+	{
+		//logn( "Thinh - Equipmnet Establish Communication Reply" );
+		SendReply(S1F11Msg, S2_L(S2_B(0), S2_L()));
+	}
+	else
+		logn( "Thinh - Unknown! Secsim will handle it!" );
+            
+    logn("Thinh <- S1F12_Reply()");    
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S1F13. simulator replies S1F14 to NTSC. Equipmnet Establish Communication 
+///////////////////////////////////////////////////////
+S1F14(S1F13Msg)
+{
+    local S1F13List;    
+    logn("Thinh -> S1F14_Reply()"); 
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+	S1F13List = decode(S1F13Msg.Text);
+	
+	if (GetCount(S1F13List) == 0)
+	{
+		logn( "Thinh - Equipment Establish Communication Reply" );
+		SendReply(S1F13Msg, S2_L(S2_B(0), S2_L(S2_A("ProdSE"), S2_A("B3947"))));
+	}	
+	else if (GetCount(S1F13List) == 2)
+	{
+		logn( "Thinh - Equipment Establish Communication Reply" );
+		SendReply(S1F13Msg, S2_L(S2_B(0), S2_L()));
+	}
+	else
+		logn( "Thinh - Unknown! Secsim will handle it!" );
+            
+    logn("Thinh <- S1F14_Reply()");    
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S2F13. simulator replies S2F14 to NTSC. Upload Equipment Constants (ECIDs) 
+///////////////////////////////////////////////////////
+_S2F14_(S2F13Msg)
+{
+    local S2F13List, i, item;    
+    logn("Thinh -> S2F14_Reply()");  
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec    
+    S2F13List = decode(S2F13Msg.Text);
+		
+    for (i=0; i < GetCount(S2F13List); i=i+1)
+    {
+		item = S2_Decode(S2F13List[i]);  //item in the list  
+		logn("Thinh - ECID:", item);		  
+    }
+    					
+    SendReply(S2F13Msg, S2_L(S2_BOOLEAN(True), S2_BOOLEAN(True), S2_U1(3), S2_U1(3)));	 
+            
+    logn("Thinh <- S2F14_Reply()");    
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S2F15. simulator replies S2F16 to NTSC.
+///////////////////////////////////////////////////////
+_S2F16_(S2F15Msg)
+{
+    logn("Thinh -> S2F16_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+	SendReply(S2F15Msg, S2_B(0)); 
+    logn("Thinh <- S2F16_Reply()");	
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S2F17. simulator replies S2F18 to NTSC.
+///////////////////////////////////////////////////////
+// _S2F18_(S2F17Msg)
+// {
+    // logn("Thinh -> S2F18_Reply()");
+	// //wait( NewTimer( 1 ) );	//sleep for 1 sec
+	// SendReply(S2F17Msg, S2_B(0)); 
+    // logn("Thinh <- S2F18_Reply()");	
+// }
+
+////////////////////////////////////////////////////////
+// NTSC requests S2F29. simulator replies S2F30 to NTSC.
+///////////////////////////////////////////////////////
+_S2F30_(S2F29Msg)
+{
+    logn("Thinh -> S2F30_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+	SendReply(S2F29Msg, S2_B(0)); 
+    logn("Thinh <- S2F30_Reply()");	
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S2F31. simulator replies S2F32 to NTSC.
+///////////////////////////////////////////////////////
+_S2F32_(S2F31Msg)
+{
+    logn("Thinh -> S2F32()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+	SendReply(S2F31Msg, S2_B(0)); 
+    logn("Thinh <- S2F32()");	
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S2F33. simulator replies S2F34 to NTSC.
+///////////////////////////////////////////////////////
+_S2F34_(S2F33Msg)
+{
+    local i, S2F33List, item2, item, reportid;
+    logn("Thinh -> S2F34_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    S2F33List = S2_Decode(S2F33Msg.Text);
+    item2 = S2_Decode(S2F33List[1]);  // 2nd item
+    REPORTLIST = NewList();
+
+    for(i = 0; i < GetCount(item2); i = i +1)
+    {
+        item = S2_Decode(item2[i]);
+        reportid = S2_Decode(item[0]);
+        REPORTLIST = InsertFirst(reportid,REPORTLIST);
+    }
+
+	SendReply(S2F33Msg, S2_B(0));	
+	
+    logn("Thinh <- S2F34_Reply()");
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S2F35. simulator replies S2F36 to NTSC. 
+///////////////////////////////////////////////////////
+_S2F36_(S2F35Msg)
+{
+    local i, ii, mReport, item, CeId, reportid S2F35List, item2;
+    logn("Thinh -> S2F36_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    S2F35List = S2_Decode(S2F35Msg.Text);
+    item2 = S2_Decode(S2F35List[1]);  // 2nd item
+    REPORTCeId = NewList();
+
+    for(ii = 0; ii < GetCount(REPORTLIST); ii = ii+1)
+    {
+        mReport = NewList();
+
+        for(i = 0; i < GetCount(item2); i = i +1)
+        {
+            item = S2_Decode(item2[i]);
+            CeId = S2_Decode(item[0]);
+            reportid = S2_Decode(item[1]);
+			
+			if ( GetCount(reportid) > 1 )
+				reportid = S2_Decode(reportid[0]);
+			else
+				reportid = S2_Decode(reportid);
+
+            if (reportid == REPORTLIST[ii])
+                mReport = InsertFirst(CeId, mReport);             
+        }
+        
+        mReport = InsertFirst(REPORTLIST[ii], mReport);       
+        REPORTCeId = InsertFirst(mReport, REPORTCeId); 
+    }
+ 					
+    SendReply(S2F35Msg, S2_B(0));	 
+
+    logn("Thinh <- S2F36_Reply()");
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S2F37. simulator replies S2F38 to NTSC.
+///////////////////////////////////////////////////////
+_S2F38_(S2F37Msg)
+{
+    logn("Thinh -> S2F38_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    SendReply(S2F37Msg, S2_B(0));	 	
+    logn("Thinh <- S2F38_Reply()");	
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S2F41. simulator replies S2F42 to NTSC.
+// This func is executed at MoveOut operation
+// It is also executed once SC sends a remote cmd to the tool.
+///////////////////////////////////////////////////////
+_S2F42_(S2F41Msg)
+{
+    logn("Thinh -> S2F42_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    logn("Thinh <- S2F42_Reply()");
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S2F43. simulator replies S2F44 to NTSC.
+///////////////////////////////////////////////////////
+_S2F44_(S2F43Msg)
+{
+    logn("Thinh -> S2F44_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+	SendReply(S2F43Msg, S2_L(S2_B(0), S2_L()));	 
+    logn("Thinh <- S2F44_Reply()");	
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S3F17. simulator replies S3F18 to NTSC.
+///////////////////////////////////////////////////////
+_S3F18_(S3F17Msg)
+{
+    local S3F17List, info, i, tempPID;
+    logn("Thinh -> S3F18_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    S3F17List = decode(S3F17Msg.Text);
+    info = S2_Decode(S3F17List[1]);
+    CID = S2_Decode(S3F17List[2]);
+    PID = S2_Decode(S3F17List[3]);
+					
+    SendReply(S3F17Msg, S2_L(S2_U1(0), S2_L()));	 
+
+    logn("Thinh - info = ", info, ", CID = ", CID, ", PID = ", PID );
+
+    for(i=0; i<TOTALPORT; i=i+1)
+    {
+		tempPID = INTRO[i].portid;
+        logn("Thinh - i = ", i);
+        logn("Thinh - tempPID = ", tempPID);
+
+        if(PID == tempPID)
+        {    
+			logn("Thinh - INTRO[i].State = ", INTRO[i].State);
+			        
+            if ( INTRO[i].State == "SU" )
+            {
+				logn("Thinh - Got my carrier. Updates CID and State to MNT");
+				INTRO[i].State = "MNT";
+				INTRO[i].PWC = 1;
+                INTRO[i].carrierid = CID ;
+                logn("Thinh - Update carrierid = ", INTRO[i].carrierid);
+				
+				if (INTRO[i].lotid != CID)
+				{
+					INTRO[i].lotid = CID ;
+					logn("Thinh - Update lotid = ", INTRO[i].lotid);	
+				}				
+                INTRO[i].PWC = 1;
+                logn("Thinh - Update PWC = ", INTRO[i].PWC);        
+                //HandlePWC1
+				Create_E87_CarrierTransitionStateReport(3030001, i); 	// Send CeId_3030001_T1CarrierCreated  
+				//Create_E87_CarrierTransitionStateReport(3030005, i); 	// Send CeId_3030005_T5CancelCarrier    
+                Create_E87_PortAssociationStateReport(3090102, i); 		// Send CeId_3090102_NotAssociatedToAssociated
+                Create_E87_CarrierTransitionStateReport(3030607, i); 	// Send CSM_WaitingForHostSlotMap				
+				//Create_E87_PortTransferStateReport(3040406, i);		//CeId_3040406_P1T9TransferBlockedToReadyToUnLoad
+				//Create_E87_PortTransferStateReport(3040604, i);		//CeId_3040604_P1T7ReadyToUnLoadToTransferBlocked
+				//Create_E87_PortTransferStateReport(3040405, i);		//CeId_3040405_P1T8TransferBlockedToReadyToLoad
+				//Create_E87_PortAssociationStateReport(3090201, i);	//CeId_3090201_AssociatedToNotAssociated
+				//Create_E87_CarrierTransitionStateReport(3030100, i);
+            }
+            else if ( INTRO[i].State == "MNT" )
+            {
+                INTRO[i].PWC = 2;
+				INTRO[i].State = "EXEC";
+                logn("Thinh - Update State to EXEC and PWC = ", INTRO[i].PWC);                
+                Create_E87_CarrierTransitionStateReport(3030708, i); // Send CSM_HostVerifiedSlotMap
+                //HandlePWC2   
+            }
+            else if ( INTRO[i].State == "" )
+            {
+				INTRO[i].State = "INTR";
+                logn("Thinh - Update State to = ", INTRO[i].State);				
+				INTRO[i].carrierid = CID ;
+                logn("Thinh - Update carrier to = ", INTRO[i].carrierid);
+                //PWC   
+                Create_E87_CarrierTransitionStateReport(3030304, i); // Send CSM_WFH_ProceedWithCarrier
+				INTRO[i].State = "MNT";
+                logn("Thinh - Update State to = ", INTRO[i].State);            
+				Create_E30_MaterialReceivedReport(14, i); 		// Send Material Received						
+				Create_E87_PortTransferStateReport(3040504, i); // Send CarrierArrived	
+				Create_E30_SpecificControlStateReport(15, i); 
+				Create_E87_PortTransferStateReport(3040405, i);
+				Create_E30_MaterialReceivedReport(14, i); 
+				Create_E87_PortTransferStateReport(3040504, i);					
+                Create_E87_CarrierTransitionStateReport(3030607, i); // Send CSM_WaitingForHostSlotMap
+            }
+            else if (info == "CancelBind")
+            {
+				logn("Thinh - The lot is aborted!");      
+				cleanupmIntro(i);      
+            }            
+			else
+			{
+				logn("Thinh - Unknown State. No reaction");
+			}
+		
+			break;
+        }
+    }
+
+    logn("Thinh <- S3F18_Reply()");
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S3F27. simulator replies S3F28 to NTSC.
+///////////////////////////////////////////////////////
+_S3F28_(S3F27Msg)
+{
+    logn("Thinh -> S3F28_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    SendReply(S3F27Msg, S2_L(S2_U1(0), S2_L()));	 
+	PortTaskObj = run(Setup_Port) ;
+    logn("Thinh <- S3F28_Reply()");    
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S5F3. simulator replies S5F4 to NTSC.
+///////////////////////////////////////////////////////
+_S5F4_(S5F3Msg)
+{
+    logn("Thinh -> S5F4_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    SendReply(S5F3Msg, S2_B(0));
+    logn("Thinh <- S5F4_Reply()");	
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S5F5. simulator replies S5F6 to NTSC. List of Alarms Request/Reply
+///////////////////////////////////////////////////////
+_S5F6_(S5F5Msg)
+{
+    logn("Thinh -> S5F6_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    SendReply(S5F5Msg, S2_B(0));
+    logn("Thinh <- S5F6_Reply()");	
+}
+
+////////////////////////////////////////////////////////
+// Host replies S6F6 to acknowledge received Tool's S6F5
+///////////////////////////////////////////////////////
+_S6F6_(S6F5Msg)
+{
+    logn("Thinh -> S6F6_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    SendReply(S6F5Msg, S2_B(0));	//0: ok; 1:busy; 2:not interested
+    logn("Thinh <- S6F6_Reply()");	
+}
+
+////////////////////////////////////////////////////////
+// Host replies S6F12 to acknowledge received Tool's S6F11 
+///////////////////////////////////////////////////////
+S6F12(S6F11Msg)
+{
+	local mS6F11List, mEachReportList, mReportSize, mReportId, mEachValueList, mValueListSize, mValueData, mValue, mValueSize, mValueList;
+	local i, i1, i2, ii, iii, mVid, mVidName, mVidValue, mStates, mConvertedValue, mSubValue, state, subStr, vidStructValue, mPossibleValue;
+	local mCeIdStruct, mRptStruct, mVidStruct, mS6F11Struct, mRunObj, mVidSizeFromDict;
+	
+    logn("Thinh -> S6F12_Reply()");
+	
+	if(RPTIDS_DICT && CEIDS_DICT && VIDS_DICT){
+		mS6F11Struct	= NewStructured(S6F11_STRUCT);
+		mCeIdStruct		= NewStructured(CeId_STRUCT);
+		mRptStruct		= NewStructured(RPTID_STRUCT);
+		mVidStruct		= NewStructured(VID_STRUCT);
+		
+		mS6F11List = Decode(S6F11Msg.Text);
+		mCeIdStruct.CeId = S2_Decode(mS6F11List[1]);
+		
+		if(DictionaryLookup(mCeIdStruct, CEIDS_DICT))	//status found
+			logn("*****  CeId:", mCeIdStruct.CeId, " (", DictionaryLookup(mCeIdStruct, CEIDS_DICT).name, ")  *****");
+		else
+			logn("*****  ", mCeIdStruct.CeId, " is Unknown   *****");	
+			
+		mS6F11Struct.dataId 		= S2_Decode(mS6F11List[0]);
+		mS6F11Struct.CeId 			= S2_Decode(mS6F11List[1]); //Actual CEID reported by Tool
+		mS6F11Struct.reportList 	= Decode(mS6F11List[2]); //Actual List of Reports reported by Tool	
+		mReportSize 				= GetCount(mS6F11Struct.reportList); //How many of them?
+		logn("*****  Number of Reports = ", mReportSize);
+			
+		for (i = 0; i < mReportSize; i = i + 1) //Now digging the data in each report
+		{
+			mEachReportList 	= Decode(mS6F11Struct.reportList[i]);
+			mReportId 			= S2_Decode(mEachReportList[0]);
+			mEachValueList 		= Decode(mEachReportList[1]);		
+			mValueListSize 		= GetCount(mEachValueList);
+			mRptStruct.rptid	= mReportId;
+
+			mValueList = NewList();
+			
+			if(DictionaryLookup(mRptStruct, RPTIDS_DICT))	//status found
+			{
+				logn("*****  ReportId:", mReportId, " (",  DictionaryLookup(mRptStruct, RPTIDS_DICT).rptname, ")  *****");	
+				//logn("mValueList Size = ", mValueListSize);
+				//logn("mEachValueList Size = ", GetCount(mEachValueList));
+				mVidSizeFromDict = GetCount(DictionaryExtractReport(mReportId, RPTIDS_DICT).vids);
+				
+				if(mVidSizeFromDict < mValueListSize){
+					logn("*************************************************************************");
+					logn("*****  ALERT: RPTIDS_DICT should be updated to match with reality!  *****");
+					logn("*************************************************************************");					
+				}
+				
+				for (ii = 0; ii < mValueListSize; ii = ii + 1)
+				{
+					if (ii > mVidSizeFromDict - 1){
+						logn("*****  Skip element: ", ii);
+					}else{
+						//logn("ii: ", ii);				
+						mValueData			= mEachValueList[ii]; //No decode to here to find whether its a B type to handle differently
+						//logn("mValueData: ", mValueData);
+						mVid				= DictionaryLookup(mRptStruct, RPTIDS_DICT).vids[ii]; //Specific vid in its list
+						//logn("mVid: ", mVid);
+						mVidName			= DictionaryLookup(mRptStruct, RPTIDS_DICT).vidnames[ii];
+						//logn("mVidName: ", mVidName);
+						mVidStruct.vid		= AtoI(mVid);
+						mFound 				= DictionaryLookup(mVidStruct, VIDS_DICT);
+						mVidValue 			= Smart_Decode(mValueData);
+						
+						if(mFound){
+							//logn("*****    VID:", mVid, " Found in VIDS_DICT");
+							//mVidValue = S2_Decode(mValueData);
+							if(GetFormat(mValueData) == "B" && GetCount(mValueData) > 2){ //B type in a list must have a special handle							
+								logn("*****    Binary data in list needs special Handle    *****");
+								mValueData			= S2_Decode(mValueData);						
+								logn("*****    VID:", mVid, " (", mVidName, ") = ", mValueData);
+							}
+							//logn("*****    VID:", mVid, " (", mVidName,  ") = ", mVidValue);
+							vidStructValue = mFound.value;
+							//logn("*****    vidStructValue:", vidStructValue[0]);
+
+							for(i2 = 0; i2 < GetCount(vidStructValue); i2 = i2 + 1 ){
+								mPossibleValue = vidStructValue[i2];
+								//logn("mPossibleValue: ", mPossibleValue);
+								find = FindString(mPossibleValue, "=");
+								//logn("find: ", find);
+								if (find.Count != 0){
+									subStr = Substring(mPossibleValue, 0, find.Start);
+									//logn("subStr: ", subStr, " AND mVidValue: ", mVidValue);
+									if (AtoI(subStr) == mVidValue){
+										logn("*****    VID:", mVid, " (", mVidName,  ") = ", subStr, " (", mPossibleValue, ")");
+										break;
+									}
+								}else{
+									logn("*****    VID:", mVid, " (", mVidName,  ") = ", mVidValue);
+									//logn("Updating VID's value to : ", mVidValue);
+									//mFound.value = mVidValue; //Set the value for the VID
+								}						
+							}						
+							
+						}else{ //May be found the vid specified in ReportIds.txt but not in Vids.txt
+							logn("*****    VID:", mVid, " (", mVidName,  ") = ", mVidValue, " NOT Found in VIDS_DICT");
+						}						
+					}
+				}
+			}
+			else
+				logn("*****  ReportId:", mRptStruct.rptid, " is Unknown   *****");
+			
+			mRptStruct.values = Reverse(mValueList);
+		}
+		
+		logn("Run EventHandler now ...");
+		run(EventHandler, NewList(mS6F11Struct));			
+	}
+	
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    SendReply(S6F11Msg, S2_B(0));
+    logn("Thinh <- S6F12_Reply()");	
+
+}
+
+DictionaryExtractReport(mReportId, RPTIDS_DICT){
+	local i, mStructReportList;
+	mStructReportList = DictionaryToList(RPTIDS_DICT);
+	for(i = 0; i < GetCount(mStructReportList); i = i + 1){
+		if (mStructReportList[i].rptid == mReportId ){
+			//logn("*****  Found my Structured Report   *****");
+			return (mStructReportList[i]);
+		}
+	}
+	
+	return (NewStructured(RPTID_STRUCT));
+}
+
+VidInfo(name, value)
+{
+	local mState, mValue;
+
+ 	switch(name)
+	{
+		case "ControlState":
+			logn("value:", value);
+			if (value == 0)
+				mState = "REMOTE";
+			else if (value == 1)
+				mState = "LOCAL";
+			else
+				mState = "Unknown";
+				//mInfo = CatString(name, " = ", mValue);
+/* 			switch(value)
+			{
+				case 1:
+					mInfo = CatString(name, " = ", value, " or REMOTE");
+					break;
+				case 0:
+					mInfo = CatString(name, " = ", value, " or LOCAL");
+					break;
+				default:
+					mInfo = CatString(name, " = ", value);
+					break;
+			} */
+			break;
+		default:
+			mState = "Unknown";
+			//mInfo = CatString(name, " = ", value);
+			break;
+	}
+	return(mState);
+}
+
+S6Fx_Request()
+{
+	logn("Thinh -> _S6Fx_Request()");
+}
+
+// S6F15_requestCeId()
+// {
+	// //logn("Thinh -> S6F15_requestCeId()");
+	// CeId = GuiGetInteger("Enter CeId: ");
+	// S6F15_Request(CeId);
+// }
+
+// S6F15_Request(mCeId)
+// {
+    // logn("Thinh -> S6F15_Request(): ", mCeId);
+	// mEvent 		= NewMessage();
+	// mEvent.stream 	= 6;
+	// mEvent.function = 15;
+	// mEvent.wbit 	= 1;		
+	// mEvent.text 	= S2_U4(mCeId);
+	// wait( NewTimer( 1 ) );	//sleep for 1 sec
+	// wait(SendPrimary(mEvent));
+    // logn("Thinh <- S6F15_Request()");	
+// }
+
+S6F17_requestAEvent()
+{
+	//logn("Thinh -> S6F17_requestAEvent()");
+	CeId = AtoI(GuiGetString("Enter CeId: "));
+	S6F17_Request(CeId);
+}
+
+S6F17_Request(mCeId)
+{
+    logn("Thinh -> S6F17_Request(): ", mCeId);
+	mEvent 		= NewMessage();
+	mEvent.stream 	= 6;
+	mEvent.function = 17;
+	mEvent.wbit 	= 1;		
+	mEvent.text 	= S2_U4(mCeId);
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	wait(SendPrimary(mEvent));
+    logn("Thinh <- S6F17_Request()");	
+}
+
+S6F19_requestRPTID()
+{
+	//logn("Thinh -> S6F19_requestRPTID()");
+	RPTID = AtoI(GuiGetString("Enter ReportId: "));
+	S6F19_request(RPTID);
+}
+
+////////////////////////////////////////////////////////
+// Host sends Individual Report Request to Tool
+///////////////////////////////////////////////////////
+S6F19_request(mRPTID)
+{
+	local mSecMsg;
+    logn("Thinh -> S6F19_request(): ", mRPTID);
+	mSecMsg 			= NewMessage();
+	mSecMsg.stream 		= 6;
+	mSecMsg.function 	= 19;
+	mSecMsg.wbit 		= 1;		
+	mSecMsg.text 		= S2_U4(mRPTID);
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	wait(SendPrimary(mSecMsg));
+    logn("Thinh <- S6F19_request()");	
+}
+
+S6F21_requestAReport()
+{
+	//logn("Thinh -> S6F21_requestAReport()");
+	RPTID = AtoI(GuiGetString("Enter ReportId: "));
+	S6F21_request(RPTID);
+}
+
+S6F21_request(mRPTID)
+{
+    logn("Thinh -> S6F21_request(): ", mRPTID);
+	mEvent 		= NewMessage();
+	mEvent.stream 	= 6;
+	mEvent.function = 21;
+	mEvent.wbit 	= 1;		
+	mEvent.text 	= S2_U4(mRPTID);
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	wait(SendPrimary(mEvent));
+    logn("Thinh <- S6F21_request()");	
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S6F23. simulator replies S6F24 to NTSC.
+///////////////////////////////////////////////////////
+_S6F24_(S6F23Msg)
+{
+    logn("Thinh -> S6F24_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    SendReply(S6F23Msg, S2_B(0));
+    logn("Thinh <- S6F24_Reply()");	
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S7F5. simulator replies S7F6 to NTSC. Upload Recipe or Sequence
+///////////////////////////////////////////////////////
+_S7F6_ (S7F5Msg)
+{
+	local entryName, sequenceName, sequenceBody, mFile, mFileStatus, seqInBinary, event;
+    logn("Thinh -> S7F6_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec    
+    entryName = S2_Decode(S7F5Msg.Text);
+	entryName = ToString(entryName);	
+    logn("Thinh - entryName = ", entryName);		
+	mFile = CatString("..\\sim\\recipe\\",entryName);	
+    mFileStatus = FindFile(ToAscii(mFile),"", FF_FILETITLEONLY);
+
+    if ( IsEmptyList(mFileStatus) )
+    {
+		logn("Thinh - File NOT found. Using static sml!");
+		if (entryName == "X-S86P1")
+			SendReply(S7F5Msg, S7F6_X_S86P1_ACK);  
+		else if (entryName == "A-S86P1")
+			SendReply(S7F5Msg, S7F6_A_S86P1_ACK); 
+		else if (entryName == "B-S86P1")
+			SendReply(S7F5Msg, S7F6_B_S86P1_ACK); 
+		else if (entryName == "C-S86P1")
+			SendReply(S7F5Msg, S7F6_C_S86P1_ACK); 
+		else if (entryName == "S86P1")
+			SendReply(S7F5Msg, S7F6_S86P1_ACK); 		
+	}
+	else
+	{
+		logn("Thinh - Recipe found. Using dynamic files!");	
+		seqInBinary		= FileRead(mFile);	
+		sequenceName 	= S2_A(entryName);
+		sequenceBody	= S2_B(seqInBinary);	
+		event 			= NewMessage();
+		event.text 		= <L < sequenceName > < sequenceBody > >;
+
+		SendReply(S7F5Msg, event.text);  	
+	}
+
+    logn("Thinh <- S7F6_Reply()");	
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S7F25. simulator replies S7F26 to NTSC. Upload Recipe or Sequence
+///////////////////////////////////////////////////////
+_S7F26_ (S7F25Msg)
+{
+	local RecipeName;	
+	logn("Thinh -> S7F26_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec	
+	RecipeName = S2_Decode(S7F25Msg.Text);
+	logn("Thinh - RecipeName = ", RecipeName);	
+	
+	if(RecipeName == "X-S86P1")
+		SendReply(S7F25Msg, S7F26_ACK_S86P1);
+	else if (RecipeName == "BC-P72GO_ILD0")
+		SendReply(S7F25Msg, S7F26_ACK_P72GO_ILD0);
+	else if (RecipeName == "C-P74_UV6_APC")
+		SendReply(S7F25Msg, S7F26_ACK_P74_UV6_APC);		
+	else
+		SendReply(S7F25Msg, S7F26_ACK_DEFAULT);
+	
+	logn("Thinh <- S7F26_Reply()");	
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S14F1. simulator replies S14F2 to NTSC.
+// S14F1 occurs once FW wants to verify carrier location with tool
+///////////////////////////////////////////////////////
+_S14F2_(S14F1Msg)
+{
+    local i, mEvent, mList, mLID, mCID, mPID, mRECIPE, mINTROTYPE, mQUANTITY, mObjList, mObjName, ObjType;
+    logn("Thinh -> S14F2_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+	
+    S14F1List = decode(S14F1Msg.Text);
+    ObjType = S2_Decode(S14F1List[1]);  // 2nd item
+	
+	logn("Thinh - ObjType = ", ObjType);	
+	
+	if (ObjType == "RECIPE PARAMETER")	// Request UV Powers for Recipe
+	{
+		logn( "Thinh - Creating UV Power Response!");
+	
+		mList 		= decode(S14F1List[2]);  // 3rd item
+		mObjName 	= S2_Decode(mList[0]);  // 1st item
+	
+		logn("Thinh - mObjName = ", mObjName);	
+		
+		mEvent =	S2_L(
+						S2_L(
+							S2_L(
+								S2_A(mObjName), 
+								S2_L(
+									S2_L(
+										S2_A("VALUE"), 
+										S2_F8(60.0)), 
+									S2_L(
+										S2_A("MIN"), 
+										S2_F8(0.0)),
+									S2_L(
+										S2_A("MAX"), 
+										S2_F8(100.0)),		
+									S2_L(
+										S2_A("UNITS"), 
+										S2_A("percent 1 %")),										
+									S2_L(
+										S2_A("TYPE"), 
+										S2_A("F8"))))),									
+						S2_L(
+							S2_U1(0),
+							S2_L())
+						);		
+						
+		SendReply(S14F1Msg, mEvent);	
+	}
+	else if (ObjType == "PROCESSJOB")	// Request UV Powers for Job 
+	{
+		logn("Thinh - PROCESSJOB");
+		SendReply(S14F1Msg, S14F2_JOB_ACK); 
+	}	
+	else
+	{
+		mList = NewList(mLID, mCID, mPID, mRECIPE, mINTROTYPE, mQUANTITY);
+		mList = readIntroFile();
+
+		if ( isEmptyList(mList) )
+		{
+			logn("INTROFILE does not exist");				
+			SendReply(S14F1Msg, S2_(S2_L(), S2_L(S2_U1(0), S2_())));	 
+		}
+		else if (mCID != "")
+		{
+			logn("INTROFILE NOT blank");
+			mCID = mList[1];
+			mPID = ToAscii(mList[2]);
+		}
+		else
+		{
+			logn("INTROFILE is blank OR does NOT exist");
+			i = 0;
+			mCID = "TESTLOT1";
+			mPID = 1;
+			INTRO[i].lotid = "TESTLOT1";
+			INTRO[i].carrierid = mCID;
+			INTRO[i].portid = 1;
+			INTRO[i].recipe = "TESTRECIPE";
+			//INTRO[i].introtype = INTROTYPE;
+			INTRO[i].quantity = 25;
+			INTRO[i].State = "INTR";							
+			SUBSTRATECOUNT = 25;		
+			ShowIntroStruct(i);
+		}
+
+		mEvent =	S2_L(
+						S2_L(
+							S2_L(
+								S2_A(mCID), 
+								S2_L(
+									S2_L(
+										S2_A("ObjID"), 
+										S2_A(mCID)), 
+									S2_L(
+										S2_A("LocationID"), 
+										S2_A("Load Port 1 - Docked")),
+									S2_L(
+										S2_A("CarrierAccessingStatus"), 
+										S2_U1(mPID))))),
+						S2_L(
+							S2_U1(0),
+							S2_L())
+						);	
+						
+		SendReply(S14F1Msg, mEvent);	
+	}
+	
+	logn( "Thinh - Sending S14F2 Reply");
+	            
+    logn("Thinh <- S14F2_Reply()");
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S14F9. simulator replies S14F10 to NTSC. S14F9 occurs after S16F15
+///////////////////////////////////////////////////////
+_S14F10_(S14F9Msg)
+{
+    local S14F9List, Mode, listCont, listCjId, Type, listCId, PJInfo, listPJ, obj1, obj2, i, tempCID;
+    logn("Thinh -> S14F10_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    S14F9List = decode(S14F9Msg.Text);
+    Mode = S2_Decode(S14F9List[1]);  // 2nd item
+
+    if ( Mode == "ControlJob" )
+    {
+        listCont = S2_Decode(S14F9List[2]);
+        listCjId = S2_Decode(listCont[0]);
+        Type = S2_Decode(listCjId[0]);  // 1st item
+
+        if ( Type == "ObjID" )
+        {
+            CJID = S2_Decode(listCjId[1]);
+            logn( "Thinh - CJID = ", CJID);
+        }
+
+        listCId = S2_Decode(listCont[3]);
+        Type = S2_Decode(listCId[0]);  // 1st item
+
+        if ( Type == "CarrierInputSpec" )
+        {
+            listCID = S2_Decode(listCId[1]);
+            CID = S2_Decode(listCID);
+            logn( "Thinh - CID = ", CID);
+        }   
+
+        PJInfo = S2_Decode(listCont[5]);
+        Type = S2_Decode(PJInfo[0]);  // 1st item
+
+        if ( Type == "ProcessingCtrlSpec" )
+        {
+            listPJ = S2_Decode(PJInfo[1]);  // 1st item
+            listPJ = decode(listPJ);
+            PJID = S2_Decode(listPJ[0]);  // 1st item
+            logn( "Thinh - PJID = ", PJID);
+        }   
+        obj1 = RemoveFirst(S14F9List);
+        obj2 = RemoveFirst(obj1);
+
+        for(i=0; i<TOTALPORT; i=i+1)
+        {
+            logn("Thinh - OrigCID = ", INTRO[i].carrierid);
+
+            if(CID == INTRO[i].carrierid)
+            {
+                logn("Thinh - Got my S14F9. Updates CJID and State");
+                INTRO[i].cjid = CJID;
+                INTRO[i].State = "RUN";
+                logn("Thinh - Update cjid = ", INTRO[i].cjid);
+                logn("Thinh - Update ready = ", INTRO[i].State);
+                break;
+            }
+        }
+    }   
+    else
+        logn( "Thinh - wrong message");
+	
+    SendReply(S14F9Msg, S2_L(S2_A(CJID), S2_L(obj2), S2_L(S2_U1(0), S2_L())));
+	
+	Create_E94_CJTransitionStateReport(3250001, i); // Send CJ_1
+	Create_E94_CJTransitionStateReport(3250103, i); // Send CJ_3
+	Create_E94_CJTransitionStateReport(3250304, i); // Send CJ_6
+			
+    logn("Thinh <- S14F10_Reply()");
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S16F15. simulator replies S16F16 to NTSC. S16F15 occurs before S14F9
+///////////////////////////////////////////////////////
+_S16F16_(S16F15Msg)
+{
+    local i, index, S16F15List, item2, carrierList, reclist, tempCID, pjList, PJIDList, SlotToProcessList;
+    logn("Thinh -> S16F16_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    S16F15List = decode(S16F15Msg.Text);
+    pjList = decode(S16F15List[1]);  // 2nd item
+	logn("Thinh - Number of PJ is ", GetCount(pjList));
+	PJIDList = NewList();
+	STPLIST = NewList();
+	
+	for (i=0; i< GetCount(pjList); i=i+1)
+	{
+		item2 = decode(pjList[i]);
+		PJID = S2_Decode(item2[0]);  // 1st item
+		logn("Thinh - PJID = ", PJID);
+		carrierList = S2_Decode(item2[2]);
+		carrierList = decode(carrierList);
+		CID = S2_Decode(carrierList[0]);
+		logn("Thinh - CID = ", CID);
+		SlotToProcessList = S2_Decode(carrierList[1]);
+		logn("Thinh - SlotToProcessList = ", SlotToProcessList);		
+		STPLIST = InsertFirst(SlotToProcessList, STPLIST);		
+		reclist = S2_Decode(item2[3]);  // 4th item
+		RECIPE = S2_Decode(reclist[1]);  // 2nd item
+		logn("Thinh - Update RECIPE = ", RECIPE);
+		INTRO[i].recipe = RECIPE;		
+		PJIDList = InsertFirst((<A PJID>), PJIDList);
+	}
+
+	logn("PJIDList = ", PJIDList);
+	PJIDList = Reverse(PJIDList);
+	logn("PJIDList = ", PJIDList);	
+	logn("STPLIST = ", STPLIST);
+	
+	if (GetCount(STPLIST) < 1) // No specific slots slection, so do all slots
+		STPLIST = DEFAULTSLOTLIST;
+		
+	logn("STPLIST = ", STPLIST);
+
+    SendReply(S16F15Msg, S2_L(S2_L(PJIDList), S2_L(S2_BOOLEAN(True), S2_L())));  
+		 
+	for(i=0; i<GetCount(PJIDList); i=i+1)
+	{		
+		logn("Thinh - PJID = ", S2_Decode(PJIDList[i]));
+		INTRO[i].pjid = S2_Decode(PJIDList[i]);	
+		Create_E40_PJTransitionStateReport(3240001, 0); // Send PR_1
+	}
+		    			    
+    logn("Thinh <- S16F16_Reply()");
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S16F19. simulator replies S16F20 to NTSC.
+///////////////////////////////////////////////////////
+_S16F20_(S16F19Msg)
+{
+    logn("Thinh -> S16F20_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    SendReply(S16F19Msg, S2_L());
+    logn("Thinh <- S16F20_Reply()");    
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S16F21. simulator replies S16F22 to NTSC.
+///////////////////////////////////////////////////////
+_S16F22_(S16F21Msg)
+{
+    logn("Thinh -> S16F22_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    SendReply(S16F21Msg, S2_U2(100));
+    logn("Thinh <- S16F22_Reply()");    
+}
+
+////////////////////////////////////////////////////////
+// NTSC requests S16F27. simulator replies S16F28 to NTSC.
+///////////////////////////////////////////////////////
+_S16F28_(S16F27Msg)
+{
+    logn("Thinh -> S16F28_Reply()");
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+    SendReply(S16F27Msg, S2_L(S2_BOOLEAN(True), S2_L()));
+    JobObj = run(HandleJob);
+    logn("Thinh <- S16F28_Reply()");    
+}
+
+///////////////////////////////////////////////////
+// This funct is to start processing wafers.
+// It's invoked after the S14F9 send out by SC.
+// That's the time SC requestes Tool to create PJ/CJ.
+///////////////////////////////////////////////////
+HandleJob()
+{
+    local mIntroIndex, mIntro, i;
+    logn("Thinh -> HandleJob()");
+	
+    for(i=0; i<TOTALPORT; i=i+1)
+    {
+        mIntro = INTRO[i];
+        PID = mIntro.portid;
+        CID = mIntro.carrierid;
+        PJID = mIntro.pjid;
+        CJID = mIntro.cjid;
+
+        logn("got PID = ", PID, ", CID = ", CID, ", PJID = ", PJID, ", CJID = ", CJID);
+
+        if ( (PID > 0) && (mIntro.State == "RUN") && (mIntro.inprocess == 0) )
+        {
+            logn("Thinh - Got mIntro Info");
+            INTRO[i].inprocess = 1;
+            logn("Thinh - Update inprocess = ", INTRO[i].inprocess);
+            mIntroIndex = i;
+            break;
+        }
+    }
+
+    logn("Thinh - HandleJob(", mIntro.carrierid, ") PortID(", mIntro.portid, ")");
+	
+	ProcessingTheLot(mIntroIndex);
+		
+	//Moveout & Cleanup
+	UnloadMaterial(mIntroIndex);
+	cleanupmIntro(mIntroIndex);		
+
+    logn("Thinh <- HandleJob(", mIntro.carrierid, ") PortID(", mIntro.portid, ")");
+}
+
+///////////////////////////////////////////////////
+// This funct is to make Ports ready for INTRO.
+// It's invoked after the 2nd S7F19 send out by SC.
+// That's the time the GC happening & almost done.
+///////////////////////////////////////////////////
+Setup_Port()
+{
+    local mIntroIndex, string, mFileStatus, i, done, mPort, port;
+    logn("Thinh -> Setup_Port()");
+	//wait( NewTimer( 4 ) );	//sleep for 4 secs
+    logn("Thinh - Preparing port...");
+    mIntroIndex = GetIntroInfo();
+    logn("Thinh - mIntroIndex = ", mIntroIndex);
+		
+    if (mIntroIndex == 0)
+    {
+		i = mIntroIndex;
+        logn(INTROFILE, " does NOT exist");
+		INTRO[i].lotid = "TESTLOT1";
+		INTRO[i].carrierid = "TESTLOT1";
+		INTRO[i].portid = 1;
+		INTRO[i].recipe = "TESTRECIPE";
+		//INTRO[i].introtype = INTROTYPE;
+		INTRO[i].quantity = 25;
+		INTRO[i].State = "INTR";					
+		//INTRO[i].quantity = QUANTITY;
+		INTRO[i].State = "SU";
+		SUBSTRATECOUNT = 25;
+		ShowIntroStruct(i);
+		Create_E30_MaterialReceivedReport(14, i); 		// Send Material Received				
+		Create_E87_PortTransferStateReport(3040504, i); // Send CarrierArrived
+		Create_E30_SpecificControlStateReport(15, i); 		
+		Create_E87_PortTransferStateReport(3040405, i);
+		Create_E30_MaterialReceivedReport(14, i); 
+		Create_E87_PortTransferStateReport(3040504, i);			
+    }
+    else
+    {
+		for(i=0; i<TOTALPORT; i=i+1)
+		{
+			mState = INTRO[i].State;
+			logn("Thinh - i = ", i);
+							
+			if(mState == "INTR")
+			{ 
+				logn("Updates State to SU");
+				INTRO[i].State = "SU";
+				Create_E30_MaterialReceivedReport(14, i); 
+				Create_E87_PortTransferStateReport(3040504, i);	
+				Create_E30_SpecificControlStateReport(15, i); 
+				Create_E87_PortTransferStateReport(3040405, i);
+				Create_E30_MaterialReceivedReport(14, i); 
+				Create_E87_PortTransferStateReport(3040504, i);					
+			}
+		}	
+	}
+
+    logn("Thinh <- Setup_Port()");
+}
+
+UnloadMaterial(mIntroIndex)
+{
+    logn("Thinh -> UnloadMaterial(", INTRO[mIntroIndex].carrierid, ") PortID(", INTRO[mIntroIndex].portid, ")");
+	Create_E87_PortTransferStateReport(3040406, mIntroIndex);
+	Create_E87_PortTransferStateReport(3040405, mIntroIndex);
+    logn("Thinh <- UnloadMaterial(", INTRO[mIntroIndex].carrierid, ") PortID(", INTRO[mIntroIndex].portid, ")");
+}
+
+////////////////////////////////////////////////////////
+//
+// Utility to verify data type.
+// 
+///////////////////////////////////////////////////////
+TestData(mData)
+{
+    if (IsArray(mData))
+        logn("Thinh -> mData is an Array: ", mData);
+    else if (IsInteger(mData))
+        logn("Thinh -> mData is an Integer: ", mData);
+    else if (IsList(mData))
+        logn("Thinh -> mData is a List: ", mData);
+    else if (IsMessage(mData))
+        logn("Thinh -> mData is a Message: ", mData);
+    else if (IsString(mData))
+        logn("Thinh -> mData is a String: ", mData);
+    else if (IsSECS(mData))
+        logn("Thinh -> mData is a SECS: ", mData);
+    else if (IsStructured(mData))
+        logn("Thinh -> mData is a Structure");
+    else
+        logn("Thinh -> mData is Unknown");
+
+    if ( (IsInteger(mData) == 0) && (IsStructure(mData) == 0) && (IsMessage(mData) == 0) )
+    {
+        count = GetCount(mData);
+        logn("Thinh -> count = ",count );
+    }
+}
+
+/////////////////////////////////////////////////////////////////
+// This funct is to gather Lot Intro's information
+// It's invoked after the Intro already started.
+// It's used as assumtion SC knowing what info FW is holding. 
+/////////////////////////////////////////////////////////////////
+GetIntroInfo()
+{
+    local i, k, mPort, mFileStatus, mCarrierID, string, mfound, mindex;
+    local start, end, openBracket, closeBracket, val_start, val_end, mIntroInfo;
+    logn("Thinh -> GetIntroInfo()");    
+    i = 0;    
+    NumIntro = NumIntro + 1;
+    logn("Thinh - NumIntro = ", NumIntro);
+    mFileStatus = FindFile(ToAscii(INTROFILE),"", FF_FILETITLEONLY);
+
+    if ( !IsEmptyList(mFileStatus) )
+    {
+		logn(INTROFILE, " does exist");      
+		string = FileRead(INTROFILE);
+      
+		if( IsString( string )) 
+		{			
+			//mIntroInfo = NewList(LID, CID, PID, RECIPE, INTROTYPE, QUANTITY);
+			mIntroInfo = readIntroFile();
+
+			LID = mIntroInfo[0];
+			CID = mIntroInfo[1];
+			PID = mIntroInfo[2];
+			RECIPE = mIntroInfo[3];
+			INTROTYPE = mIntroInfo[4];
+			QUANTITY = mIntroInfo[5];
+			
+			logn("PID=", PID);
+			
+			for(i=0; i<TOTALPORT; i=i+1)
+			{
+				mPort = INTRO[i].portid;				
+				logn("mPort=", mPort);
+							
+				if(PID == mPort)
+				{
+					logn("Thinh - Updates IntroOBJ for PID:", PID);
+					INTRO[i].lotid = LID;
+					INTRO[i].carrierid = CID;
+					INTRO[i].portid = PID;
+					INTRO[i].recipe = RECIPE;
+					INTRO[i].introtype = INTROTYPE;
+					INTRO[i].quantity = QUANTITY;
+					INTRO[i].State = "INTR";
+					
+					SUBSTRATECOUNT = QUANTITY;
+					
+					ShowIntroStruct(i);
+					cleanupIntroFile();					
+				}
+			}
+		}
+    }
+    else
+    {
+		logn(INTROFILE, " does NOT exist"); 
+		logn("Thinh - It's first intro WITHOUT INTROFILE");
+    }
+
+    logn("Thinh - i = ", i);
+    logn("Thinh <- GetIntroInfo()");
+
+    return (i);   
+}
+
+/////////////////////////////////////////////////////////////////
+// This funct is initilize the structure represents for each intro
+// It's invoked once making readiness for new intro
+// Each intro struct repesents for each intro lot.
+// We have 4 ports so we need 4 structs. 
+/////////////////////////////////////////////////////////////////
+Initialize_Intro()
+{        
+    local i, k, mLotID, mCarrierID, mPortID;
+	//logn("Thinh -> Initialize_Intro()");
+    RecCount = 0;
+    RECORDID = 101;
+	INTRO = NewArray(4);	
+	for(i = 0; i < TOTALPORT; i = i+ 1){
+		INTRO[i] = NewStructured(IntroOBJ);
+	}
+    //Basic initialization          
+	for(i = 0; i < TOTALPORT; i = i+ 1){
+		k = i + 1;        
+		mLotID = CatString("ASMLOT", ToAscii(k)); 
+		mCarrierID = ToAscii(k);
+		mPortID = k;
+		//logn("Structure", i, ", LotID:", mLotID, ", CarrierID:", mCarrierID, ", PortID:", mPortID);
+		setIntroStruct(i, mLotID, mCarrierID, k, "", "", 25, "", "INIT", 0, 0, 0, 0, 0, "");
+	}
+	if(CTRLREMOTE)
+		UpdateRecipeDirectories();	
+	//logn("Thinh <- Initialize_Intro()");	
+}
+
+/////////////////////////////////////////////////////////////////
+// This funct is to blankout or cleanup INTROFILE.
+// INTROFILE is an xml file produced by SC @IN in benchtest mode
+// The file holding intro info of the lot that's introduced with SC.
+// Once the data of the file is no longer needed. Clean it off to prevent ambiguity
+// Because no support delete file function in SSPro so we blank it out. 
+/////////////////////////////////////////////////////////////////
+cleanupIntroFile()
+{
+    local mFileStatus, mWriteStatus ;
+    logn("Thinh -> cleanupIntroFile()");
+    mFileStatus = FindFile(ToAscii(INTROFILE),"", FF_FILETITLEONLY);
+
+    if ( !IsEmptyList(mFileStatus) )
+    {       
+		mWriteStatus = FileWrite(INTROFILE, "");
+
+        if ( IsEmptyList(mWriteStatus) )
+            logn("Failed to blank ", INTROFILE);
+        else
+            logn("Successfully blanked ", INTROFILE);
+    }
+    else
+		logn(INTROFILE, " does NOT exist");
+
+    logn("Thinh <- cleanupIntroFile()");
+}
+
+/////////////////////////////////////////////////////////////////
+// This funct is to blank out or clean up a particular intro struct.
+// An intro struct is a struct holding info of a particular intro
+// After the lot is moved out we clean its intro struct 
+/////////////////////////////////////////////////////////////////
+cleanupmIntro(mIndex)
+{
+    local i, k, mFileStatus, mWriteStatus, mIntroInfo, clean;
+    local mLID, mCID, mPID, mRECIPE, mINTROTYPE, mQUANTITY;
+    logn("Thinh -> cleanupmIntro(", mIndex, ")");
+    mIntroInfo = readIntroFile();
+
+    if ( !IsEmptyList(mIntroInfo) )
+    {
+        mLID = mIntroInfo[0];
+        mCID = mIntroInfo[1];
+        mPID = mIntroInfo[2];
+        mRECIPE = mIntroInfo[3];
+        mINTROTYPE = mIntroInfo[4];
+        mQUANITY = mIntroInfo[5];
+
+        if (mCID != "")
+        {
+            clean = 0;
+
+            for(i=0; i<TOTALPORT; i=i+1)
+            {
+                logn("mCID = ", mCID);
+                logn("INTRO[i].carrierid = ", INTRO[i].carrierid);
+
+                if (INTRO[i].carrierid == mCID)
+                {
+                    logn("current INTROFILE is my INTROFILE");
+                    cleanupIntroFile();
+                    clean = 1;
+                    break;
+                }
+            }
+            if (clean == 0)
+                logn("INTROFILE is not my INTROFILE. No need to clean");
+        }
+        else
+            logn("INTROFILE is already blank. No need to cleanupIntroFile()");
+    }
+    else
+        logn(INTROFILE, " does not exist");
+
+    //reset the Intro structure
+    k = mIndex+1;
+    mLID = CatString("TESTLOT", ToAscii(k));
+    mCID = CatString("TESTLOT", ToAscii(k));
+    setIntroStruct(mIndex, mLID, mCID, k, "", "", 25, "", "START", 0, 0, 0, 0, 0);
+    NumIntro = NumIntro - 1;
+    logn("Current NumIntro = ", NumIntro);
+
+    logn("Thinh <- cleanupmIntro(", mIndex, ")");
+}
+
+/////////////////////////////////////////////////////////////////
+// This funct is to set values to a particular intro struct.
+// An intro struct is a struct holding info of a particular intro
+//  
+/////////////////////////////////////////////////////////////////
+SetIntroStruct(mIndex, mLID, mCID, mPID, mRec, mIntType, mQuan, mPJID, mCJID, mState, mInProc, mFirst, mPWC, mCJStart, mPjCmd)
+{
+	//logn("Thinh -> SetIntroStruct()");
+	
+    INTRO[mIndex].lotid = mLID;
+    INTRO[mIndex].carrierid = mCID;
+    INTRO[mIndex].portid = mPID;
+    INTRO[mIndex].recipe = mRec;
+    INTRO[mIndex].introtype = mIntType;
+    INTRO[mIndex].quantity = mQuan;
+    INTRO[mIndex].pjid = mPJID;
+    INTRO[mIndex].cjid = mCJID;
+    INTRO[mIndex].State = mState;
+    INTRO[mIndex].inprocess = mInProc;
+    INTRO[mIndex].first = mFirst;
+    INTRO[mIndex].PWC = mPWC;
+    INTRO[mIndex].CJStart = mCJStart;
+	INTRO[mIndex].pjCmd = mPjCmd;
+    
+	//logn("Thinh <- SetIntroStruct()");    
+}
+
+/////////////////////////////////////////////////////////////////
+// This funct is to display info in a particular intro struct.
+// An intro struct is a struct holding info of a particular intro
+//  
+/////////////////////////////////////////////////////////////////
+ShowIntroStruct(mIndex)
+{
+    logn("LID = ", INTRO[mIndex].lotid);
+    logn("CID = ", INTRO[mIndex].carrierid);
+    logn("PID = ", INTRO[mIndex].portid);
+    logn("RECIPE = ", INTRO[mIndex].recipe);
+    logn("INTROTYPE = ", INTRO[mIndex].introtype);
+    logn("QUANTITY = ", INTRO[mIndex].quantity);
+    logn("PJID = ", INTRO[mIndex].pjid);
+    logn("CJID = ", INTRO[mIndex].cjid);
+    logn("State = ", INTRO[mIndex].State);
+    logn("INPROCESS = ", INTRO[mIndex].inprocess);
+    logn("FIRST = ", INTRO[mIndex].first);
+    logn("PWC = ", INTRO[mIndex].PWC);
+    logn("CJStart = ", INTRO[mIndex].CJStart);
+}
+
+///////////////////////////////////////////////////////////////////
+// This funct is to read INTROFILE, the xml file produced by SC @IN in benchtest mode
+// The file holding intro info of the lot that's introduced with SC.
+// The return data is in a list 
+/////////////////////////////////////////////////////////////////
+readIntroFile()
+{
+    local string, i, k, openBracket, closeBracket, word;
+    local start, end, val_start, val_end;
+    local mLID, mCID, mPID, mRECIPE, mINTROTYPE, mQUANTITY;
+
+	logn("Thinh -> readIntroFile()"); 
+	
+    string = FileRead(INTROFILE);
+
+	if( IsString( string )) 
+	{
+		logn("Reading... ", INTROFILE);
+
+		k = GetCount( string );
+		i = 0;
+
+		while( i < k ) 
+		{
+			switch (string[i])
+			{
+				case "<":
+						openBracket = 1;
+						start = i + 1;
+						break;
+				case ">":   
+						closeBracket = 1;
+						end = i;
+						break;
+				default:
+						break;
+			}
+			
+			if (openBracket == 1 && closeBracket == 1)
+			{
+				word = Substring( string, start, (end-start));
+				//logn("got the word = ", word);
+				switch(word)
+				{
+					case "LotID":
+						val_start = end + 1;
+						//logn(" val_start = ", val_start );
+						break;
+					case "/LotID":
+						val_end = start- 1;
+						//logn(" val_end = ", val_end );
+						mLID = Substring( string, val_start, ( val_end - val_start ));
+						break;
+					case "CarrierID":
+						val_start = end + 1;
+						//logn(" val_start = ", val_start );
+						break;
+					case "/CarrierID":
+						val_end = start- 1;
+						//logn(" val_end = ", val_end );
+						mCID = Substring( string, val_start, ( val_end - val_start ));
+						break;
+					case "PortID":
+						val_start = end + 1;
+						//logn(" val_start = ", val_start );
+						break;
+					case "/PortID":
+						val_end = start- 1;
+						//logn(" val_end = ", val_end );
+						mPID = AtoI(Substring( string, val_start, ( val_end - val_start )));
+						break;
+					case "Recipe":
+						val_start = end + 1;
+						//logn(" val_start = ", val_start );
+						break;
+					case "/Recipe":
+						val_end = start- 1;
+						//logn(" val_end = ", val_end );
+						mRECIPE = Substring( string, val_start, ( val_end - val_start ));
+						break;
+					case "IntroType":
+						val_start = end + 1;
+						//logn(" val_start = ", val_start );
+						break;
+					case "/IntroType":
+						val_end = start- 1;
+						//logn(" val_end = ", val_end );
+						mINTROTYPE = Substring( string, val_start, ( val_end - val_start ));
+						break;
+					case "LotQuantity":
+						val_start = end + 1;
+						//logn(" val_start = ", val_start );
+						break;
+					case "/LotQuantity":
+						val_end = start- 1;
+						//logn(" val_end = ", val_end );
+						mQUANTITY = AtoI(Substring( string, val_start, ( val_end - val_start )));
+						break;
+					default : break;
+				}
+
+				//reset the values to get ready for next route
+				openBracket = 0;    
+				closeBracket = 0;   
+				start = 0;
+				end = 0;
+			}
+
+			i = i + 1;  
+		}
+
+	}  
+    else
+    {
+        logn(INTROFILE, " is blank");  
+    }
+
+    logn("mLID = ", mLID, ", mCID = ", mCID, ", mPID = ", mPID );
+    logn("mRECIPE = ", mRECIPE, ", mINTROTYPE = ", mINTROTYPE, ", mQUANTITY = ", mQUANTITY);
+
+    mList = NewList(mLID, mCID, mPID, mRECIPE, mINTROTYPE, mQUANTITY);
+
+	logn("Thinh <- readIntroFile()"); 
+
+    return (mList);
+}
+
+///////////////////////////////////////////////////////////////////
+// This funct is Processing the Lot
+/////////////////////////////////////////////////////////////////
+ProcessingTheLot(IntroListIndex)
+{
+	local mFirstSlot, mSlotList, BlockSize, mSlotID, mSequence, pos, posX, posA, posB, posC, mChambers, mSlotQty, mIndex;
+	logn("Thinh -> ProcessingTheLot(", INTRO[IntroListIndex].lotid, ")");	
+    mFirstSlot = 26 - INTRO[IntroListIndex].quantity;		
+	mSlotList = NewList();
+								
+    for(i=0; i < GetCount(STPLIST); i=i+1)
+    {   		
+		BlockSize = GetCount(STPLIST[i]);		
+		logn("Thinh - BlockSize = ", BlockSize);	
+		
+		if (BlockSize > 1)	//in case it's a list of slots
+		{							
+			for(ii=0; ii < BlockSize; ii=ii+1)
+			{				
+				mSlotID = STPLIST[i][ii];
+				//logn("Thinh - mSlotID = ", mSlotID);
+				mSlotID = S2_Decode(mSlotID);
+				logn("Thinh - mSlotID = ", mSlotID);	
+				mSlotList = InsertFirst(mSlotID, mSlotList);						
+			}
+		}
+		else	//it's an individual slot
+		{
+			mSlotID = S2_Decode(STPLIST[i]);
+			logn("Thinh - mSlotID = ", mSlotID);
+			mSlotList = InsertFirst(mSlotID, mSlotList);
+		}              
+    }
+	
+	mSlotList = Reverse(mSlotList);
+	
+    logn("Thinh - Number of Slots = ", GetCount(mSlotList));
+    
+	mSequence 	= INTRO[IntroListIndex].recipe;
+	pos			= FindString(mSequence, "-", 0);
+	mChambers	= Substring( mSequence, 0, pos.start);	
+	posX 		= FindString(mChambers, "^AX", 0);
+	
+	if (posX.count > 0)
+		mChambers = "ABC";
+		
+	logn("Thinh - mChambers = ", mChambers);
+		
+	if ( mChambers != "" )
+	{	
+		mSlotQty = GetCount(mSlotList);
+		mIndex = 0;				
+		Create_E40_PJTransitionStateReport(3240102, mIntroIndex); // send pj_2 - PJ created
+		Create_E40_PJTransitionStateReport(3240204, mIntroIndex); // send pj_4 - PJ starts
+		
+		logn("Thinh - Start processing wafers!");
+	
+		do
+		{		
+			//logn("Thinh - Master mIndex = ", mIndex);				
+			posA = FindString(mChambers, "^AA", 0);
+			if (posA.count > 0)
+			{
+				mIndex = RunningTwinSideChamber(mIntroIndex, mSlotList, mIndex, "A");				
+				//logn("Thinh - now mIndex = ", mIndex);				
+				if ( mIndex >= mSlotQty )
+					break;
+			}
+			
+			posB = FindString(mChambers, "^AB", 0);
+			if (posB.count > 0)
+			{
+				mIndex = RunningTwinSideChamber(mIntroIndex, mSlotList, mIndex, "B");
+				//logn("Thinh - now mIndex = ", mIndex);				
+				if ( mIndex >= mSlotQty )
+					break;
+			}
+			
+			posC = FindString(mChambers, "^AC", 0);
+			if (posC.count > 0)
+			{
+				mIndex = RunningTwinSideChamber(mIntroIndex, mSlotList, mIndex, "C");
+				//logn("Thinh - now mIndex = ", mIndex);				
+				if ( mIndex >= mSlotQty )
+						break;			
+			}
+		}while(mIndex < mSlotQty);
+		
+		logn("Thinh - Complete processing all wafers!");
+
+		Create_E40_PJTransitionStateReport(3240405, mIntroIndex);	//PJ complete
+		Create_E94_CJTransitionStateReport(3250507, mIntroIndex);	//CJ complete
+		
+		logn("Thinh <- ProcessingTheLot(", INTRO[IntroListIndex].lotid, ")");		
+	}
+}
+
+///////////////////////////////////////////////////////////////////
+// This funct is processing wafers in the TwinSideChamber
+/////////////////////////////////////////////////////////////////
+RunningTwinSideChamber(IntroIndex, SlotList, index, Chamber)
+{
+	local S1Slot, S2Slot, SlotQty, Port;	
+	logn("Thinh -> RunningTwinSideChamber(", Chamber, ")");		
+	SlotQty = GetCount(SlotList);
+	Port = INTRO[IntroIndex].portid;	
+	S1Slot = SlotList[index];
+	Create_E90_SubstrateTransitionReport(3260001, IntroIndex, S1Slot); 	// CeId_3260001_T1NoStateToAtSource
+	Create_E90_SubstrateTransitionReport(3270001, IntroIndex, S1Slot);	//CeId_3270001_T10NoStateToNeedsProcessing 			
+
+	logn("Thinh - S1Slot = ", S1Slot);
+	
+	if (index == SlotQty - 1)
+		S2Slot = "";
+	else
+	{
+		index = index + 1;
+		S2Slot = SlotList[index];		
+		Create_E90_SubstrateTransitionReport(3260001, IntroIndex, S2Slot); 	// CeId_3260001_T1NoStateToAtSource
+		Create_E90_SubstrateTransitionReport(3270001, IntroIndex, S2Slot);	//CeId_3270001_T10NoStateToNeedsProcessing 		
+	}	
+
+	logn("Thinh - S2Slot = ", S2Slot);
+	logn("Thinh - Port = ", Port);
+		
+	if (Port == 1)
+	{	
+		Create_E87_FOUPA_WaferStartReport(1502890100, IntroIndex, S1Slot);			//CeId_1502890100_PodAWaferProcessingStarted -> Port1, Side1  
+		Create_E87_FOUPA_WaferCompleteReport(1502900100, IntroIndex, S1Slot);    	//CeId_1502900100_PodAWaferProcessingCompleted -> Port1, Side1
+		
+		if ( S2Slot != "" )
+		{
+			Create_E87_FOUPA_WaferStartReport(1502890100, IntroIndex, S2Slot);		//CeId_1502890100_PodAWaferProcessingStarted -> Port1, Side2   				
+			Create_E87_FOUPA_WaferCompleteReport(1502900100, IntroIndex, S2Slot);    //CeId_1502900100_PodAWaferProcessingCompleted -> Port1, Side2 		
+		}				
+	}
+	else
+	{
+		Create_E87_FOUPB_WaferStartReport(1502890200, IntroIndex, S1Slot);			//CeId_1502890200_PodBWaferProcessingStarted -> Port2, Side1 
+		Create_E87_FOUPB_WaferCompleteReport(1502900200, IntroIndex, S1Slot);    	//CeId_1502900200_PodBWaferProcessingCompleted -> Port2, Side1  	
+
+		if ( S2Slot != "" )
+		{				
+			Create_E87_FOUPB_WaferStartReport(1502890200, IntroIndex, S2Slot);		//CeId_1502890200_PodBWaferProcessingStarted -> Port2, Side2  				
+			Create_E87_FOUPB_WaferCompleteReport(1502900200, IntroIndex, S2Slot);   //CeId_1502900200_PodBWaferProcessingCompleted -> Port2, Side2 		
+		}
+	}
+	
+	logn("Thinh - Chamber = ", Chamber);
+		
+	if ( Chamber == "A")
+	{
+		Create_E90_ChamberAProcessStatusReport(1500580103, IntroIndex, S1Slot, S2Slot); 	//WaterStart
+		Create_E90_ChamberAProcessStatusReport(1502290103, IntroIndex, S1Slot, S2Slot); 	//RecipeStep Started		
+		Create_E90_ChamberAProcessStatusReport(1500590103, IntroIndex, S1Slot, S2Slot);		//WaferDone	
+	}		
+
+	if ( Chamber == "B")
+	{
+		Create_E90_ChamberBProcessStatusReport(1500580203, IntroIndex, S1Slot, S2Slot); 	//WaterStart			
+		Create_E90_ChamberBProcessStatusReport(1502290203, IntroIndex, S1Slot, S2Slot); 	//RecipeStep Started			
+		Create_E90_ChamberBProcessStatusReport(1500590203, IntroIndex, S1Slot, S2Slot);		//WaferDone				
+	}
+	
+	iF ( Chamber == "C")
+	{
+		Create_E90_ChamberCProcessStatusReport(1500580303, IntroIndex, S1Slot, S2Slot); 	//WaterStart			
+		Create_E90_ChamberCProcessStatusReport(1502290303, IntroIndex, S1Slot, S2Slot); 	//RecipeStep Started			
+		Create_E90_ChamberCProcessStatusReport(1500590303, IntroIndex, S1Slot, S2Slot);		//WaferDone	
+	}
+	
+	index = index + 1;
+	logn("Thinh - index = ", index);	
+	logn("Thinh <- RunningTwinSideChamber(", Chamber, ")");
+		
+	return (index);
+}
+
+CopyFiles()
+{
+	local mFileRead, mFileWrite, DirectoryName, status;
+
+    logn("Thinh -> CopyFiles()");
+		
+	CopyingFolder("..\\Sim\\config", "..\\config");
+	CopyingFolder("..\\Sim\\ct_src", "..\\ct_src");	
+	CopyingFolder("..\\Sim\\data", "..\\data");
+	CopyingFolder("..\\Sim\\recipe", "C:\\SC\\recipe");	
+	CopyingFolder("..\\Sim\\FA300Sim", "..\\FA300Sim");
+		
+	logn("*****************************************************");
+	logn("********** PLEASE WAIT UNTIL TOOL IS READY **********");
+	logn("*****************************************************");	
+}
+
+CopyingFile(mInFile, mOutFile)
+{
+	local mFileRead, mFileWrite, status;
+
+    //logn("Thinh -> CopyingFile()");
+	
+	mFileRead = mInFile;
+	mFileWrite = mOutFile;	
+    status = FindFile(ToAscii(mFileWrite),"", FF_FILETITLEONLY);
+
+    if ( IsEmptyList(status) )
+    {
+		logn("Thinh - ", mFileWrite, " NOT found!");	
+		logn("Thinh - Copying : ", mFileRead, " to : ", mFileWrite);	
+		status = filewrite(mFileWrite, FileRead(mFileRead));		
+		if (IsEmptyList(status))
+			logn("Thinh - Operation was failed!");
+		//else
+		//	logn("Thinh - Operation was successful!");			
+	}
+	else
+	{
+		logn("Thinh - ", mFileWrite, " FOUND!");	
+	}	
+		
+    //logn("Thinh <- CopyingFile()");		
+}
+
+CopyingFolder(InFolder, OutFolder)
+{
+	local mInFolder, mOutFolder, mStatus;
+
+    //logn("Thinh -> CopyingFolder()");
+	mInFolder = InFolder;
+	mOutFolder = OutFolder;		
+	mStatus = CreateDirectory(mOutFolder);	
+	//logn("Thinh - Create dir status : ", mStatus);	
+	
+	if (mStatus)
+		logn("Thinh - Already exist : ", mOutFolder);	
+	else
+		logn("Thinh - Created Dir : ", mOutFolder);	
+	
+
+	StructuredObject = FindFile (mInFolder, "*", FF_FILETITLEONLY);
+
+	if (IsDirectoryStructure ( StructuredObject))
+	{
+		mFileList = StructuredObject.Files;
+		logn("Thinh - Number of files : ", GetCount(mFileList));			
+		for(ii = 0; ii < GetCount(mFileList); ii = ii + 1)
+		{
+			mFileName = mFileList[ii].Name;
+			logn("Thinh - FileName : ", mFileName);	
+			FullPathSourceFile = CatString(mInFolder, "\\", mFileName);
+			//logn("Thinh - FullPathSourceFile : ", FullPathSourceFile);	
+			FullPathDestFile = CatString(mOutFolder, "\\", mFileName);
+			//logn("Thinh - FullPathDestFile : ", FullPathDestFile);	
+			CopyingFile(FullPathSourceFile, FullPathDestFile);	
+		}
+	}
+	else
+	{
+		logn ("It is not a Directory Structure.");
+	} 	
+		
+    //logn("Thinh <- CopyingFolder()");		
+}
+
+DisplayCeIdInfo(mCeId)
+{
+	local mCeIdStruct;
+	mCeIdStruct = NewStructured(CeId_STRUCT);
+	mCeIdStruct.CeId = mCeId;
+	
+	if(DictionaryLookup(mCeIdStruct, CeIdS_DICT))	//status found
+		logn("*****  ", mCeId, ": ", DictionaryLookup(mCeIdStruct, CeIdS_DICT).name);
+	else
+		logn("*****  ", mCeId, " is Unknown   *****");
+}
+
+GetInternalSecData(vidList)
+{
+	local mVIDList, mValue;
+		mVIDList = vidList;
+		mFormat 	= GetForMat(mVIDList);
+		logn("Thinh - mFormat = ", mFormat);
+	
+		switch(mFormat)
+		{
+			case "B": 
+				mVIDList = InsertFirst(S2_B(mValue), mVIDList);
+				break;
+			case "J": 
+				mVIDList = InsertFirst(S2_J(mValue), mVIDList);
+				break;
+			case "I1": 
+				mVIDList = InsertFirst(S2_I1(mValue), mVIDList);
+				break;
+			case "I2": 
+				mVIDList = InsertFirst(S2_I2(mValue), mVIDList);
+				break;
+			case "I4": 
+				mVIDList = InsertFirst(S2_I4(mValue), mVIDList);
+				break;
+			case "I8": 
+				mVIDList = InsertFirst(S2_I8(mValue), mVIDList);
+				break;
+			case "U1": 
+				break;
+			case "U2": 
+				mVIDList = InsertFirst(S2_U2(mValue), mVIDList);
+				break;
+			case "U4": 
+				if (mVID == 952)
+					mVIDList = InsertFirst(S2_U1(5), mVIDList);
+				else if (mVID == 955)			
+					mVIDList = InsertFirst(S2_U1(7), mVIDList);				
+				else if (mVID == 1531 || mVID == 1532)
+					mVIDList = InsertFirst(S2_U2(2), mVIDList);
+				else if (mVID == 2300010000)
+					mVIDList = InsertFirst(S2_BOOLEAN(True), mVIDList);					
+				else if (	mVID == 2300200103 || mVID == 2300200203 || mVID == 2300200303 || mVID == 2300200403 || mVID == 2300200406 || mVID == 2300200503 ||
+							mVID == 2300200506 || mVID == 2300200601 || mVID == 2300200602 || mVID == 2300200701 || mVID == 2300200702 || mVID == 2300200703 || 
+							mVID == 2300200704 || mVID == 2300200705 || mVID == 2300200706 || mVID == 2300200707 || mVID == 2300201601  )
+					mVIDList = InsertFirst(S2_U4(4), mVIDList);
+				else if (mVID == 1589)
+				{					
+					for (ii = 0; ii < 4; ii = ii + 1)
+					{
+						mStr = "Load Port";
+						mList = NewList();
+						
+						if ( ii == 2 || ii == 3 )
+							mStr = CatString(mStr, " 1");
+						else 
+							mStr = CatString(mStr, " 2");
+							
+						if ( ii == 0 || ii == 2 )
+							mStr = CatString(mStr, " - Docked");
+						else 
+							mStr = CatString(mStr, " - Undocked");	
+
+						mList = InsertFirst(S2_A(), mList);
+						mList = InsertFirst(S2_A(mStr), mList);	
+						mVIDList = InsertFirst(S2_L(mList), mVIDList);	
+					}
+				}
+				else
+					mVIDList = InsertFirst(S2_U4(999999), mVIDList);
+				
+				break;
+			case "U8": 
+				mVIDList = InsertFirst(S2_U8(mValue), mVIDList);
+				break;
+			case "F4": 
+				mVIDList = InsertFirst(S2_F4(mValue), mVIDList);
+				break;
+			case "F8": 
+				mVIDList = InsertFirst(S2_F8(mValue), mVIDList);
+				break;
+			case "BOOLEAN": 
+				mVIDList = InsertFirst(S2_BOOLEAN(mValue), mVIDList);
+				break;
+			case "L":
+				mVIDList = InsertFirst(S2_L(mValue), mVIDList);
+				break;
+			default:
+				break;
+			
+		}
+}
+
+////////////////////////////////----------------------------------------------------///////////////////////////////
+////////////////////////////////        ALL THE REQUEST MESSAGES BEGIN HERE         ///////////////////////////////
+////////////////////////////////----------------------------------------------------///////////////////////////////
+
+S1F3_Request(Vids) //Selected Equipment Status Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 1;
+	mSendMsg.function 	= 3;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(Vids);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S1F11_Request(Vids) //SVID NameList Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 1;
+	mSendMsg.function 	= 11;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(Vids);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S1F13_Request(Vids) //Establish Communications Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 1;
+	mSendMsg.function 	= 13;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(Vids);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S1F15_Request() //Request Tool is Offline Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 1;
+	mSendMsg.function 	= 15;
+	mSendMsg.wbit 		= 1;		
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S1F17_Request() //Request Tool is Online Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 1;
+	mSendMsg.function 	= 17;
+	mSendMsg.wbit 		= 1;		
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S1F21_Request(Vids) //Data Variable Namelist Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 1;
+	mSendMsg.function 	= 21;
+	mSendMsg.wbit 		= 1;
+	mSendMsg.text 		= S2_L();
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S1F23_Request(Ceids) //Request All CEIDs Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 1;
+	mSendMsg.function 	= 23;
+	mSendMsg.wbit 		= 1;
+	mSendMsg.text 		= S2_L();	
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S1F65_Request() //Request Tool is OnlineLocal Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 1;
+	mSendMsg.function 	= 65;
+	mSendMsg.wbit 		= 1;		
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S1F67_Request() //Request Tool is OnlineRemote Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 1;
+	mSendMsg.function 	= 67;
+	mSendMsg.wbit 		= 1;		
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S2F13_Request(Ecids) //Getting Equipment Constants Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 2;
+	mSendMsg.function 	= 13;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(Ecids);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S2F15_Request(Ecids) //Setting Equipment Constants Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 2;
+	mSendMsg.function 	= 15;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(Ecids);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S2F29_Request(Ecids) //Equipment Constant NameList Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 2;
+	mSendMsg.function 	= 29;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(Ecids);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S2F31_Request(Time) //Setting Date and Time Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 2;
+	mSendMsg.function 	= 31;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_A(Time);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S2F33_Request(DataId, ReportIds) //Define Reports Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 2;
+	mSendMsg.function 	= 33;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(S2_U4(DataId),S2_L(ReportIds));
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S2F35_Request(DataId, CeIds) //Link Event Reports Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 2;
+	mSendMsg.function 	= 33;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(S2_U4(DataId),S2_L(ReportIds));
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S2F37_Request(isEnabled, CeIds) //Enable or Disable Events Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 2;
+	mSendMsg.function 	= 37;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(S2_BOOLEAN(isEnabled), S2_L(CeIds));
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S2F41_Request(Cmd, CmdInfo) //Host Command Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 2;
+	mSendMsg.function 	= 41;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(Cmd, CmdInfo);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S2F43_Request(Messages, Streams) //Configure Spooling Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 2;
+	mSendMsg.function 	= 43;
+	mSendMsg.wbit 		= 1;		
+	if(isEmptyList(Messages) && isEmptyList(Streams))
+		mSendMsg.text 		= S2_L();
+	else
+		mSendMsg.text 		= S2_L(Messages, S2_L(Streams));
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S2F49_Request(DataId, ObjSpec, Rcmd, CmdData) //Enhanced Remote Command Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 2;
+	mSendMsg.function 	= 49;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(DataId, ObjSpec, Rcmd, CmdData);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S3F11_Request(PortId) //Material ID at Port Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 3;
+	mSendMsg.function 	= 11;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_U1(PortId);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S3F17_Request(DataId, CarrierAction, CarrierId, PortId, CarrierAttributes) //Carrier Action Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 3;
+	mSendMsg.function 	= 17;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(DataId, CarrierAction, CarrierId, PortId, CarrierAttributes);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S3F25_Request(PortAction, PortId, Attributes) //LoadPort Action Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 3;
+	mSendMsg.function 	= 25;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(PortAction, PortId, Attributes);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S3F27_Request(AccessMode, PortId) //LoadPort Access Change Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 3;
+	mSendMsg.function 	= 27;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(AccessMode, PortId);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S5F3_Request(isEnabled, ALID) //Enable/Disable Alarm Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 5;
+	mSendMsg.function 	= 3;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(isEnabled, ALID);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S6F15_Request(CEID) //Request Event Report
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 6;
+	mSendMsg.function 	= 15;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_U4(CEID);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S6F23_Request(RCode) //Request or Purge Spooled Data
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 6;
+	mSendMsg.function 	= 23;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_U1(RCode);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F1_Request(PPID, Length) //Process Program Load Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 1;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(PPID, Length);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F3_Request(secsData) //Process Program Send
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 3;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= secsData;
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F5_Request(PPID) //Process Program Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 5;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_A(PPID);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F7_Request(MID) //Process Program ID Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 7;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_A(MID);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F17_Request(PPID) //Delete Process Program Send
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 17;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(PPID);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F19_Request() //Request Current Process Program Directory
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 19;
+	mSendMsg.wbit 		= 1;		
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F23_Request(secsData) //Formatted Process Program Send
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 23;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= secsData;
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	//wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F25_Request(PPID) //Formatted Process Program Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 25;
+	mSendMsg.wbit 		= 1;	
+	mSendMsg.text 		= S2_A(PPID);	
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F27_Request(PPID, VerifiedInfo) //Process Program Verification Send
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 27;
+	mSendMsg.wbit 		= 1;	
+	mSendMsg.text 		= S2_L(PPID, VerifiedInfo);	
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F29_Request(Length) //Process Program Verification Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 29;
+	mSendMsg.wbit 		= 1;	
+	mSendMsg.text 		= S2_U4(Length);	
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S7F71_Request() //Request Current Process Recipes Directory
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 7;
+	mSendMsg.function 	= 71;
+	mSendMsg.wbit 		= 1;		
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S14F1_Request(ObjSpec, ObjType, ObjIds, AttrData, AttrIds) //Get Attributes Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 14;
+	mSendMsg.function 	= 1;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(ObjSpec, ObjType, ObjIds, AttrData, AttrIds);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S14F9_Request(ObjSpec, ObjType, AttrData) //Create Object (CJob Object) Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 14;
+	mSendMsg.function 	= 9;
+	mSendMsg.wbit 		= 1;		
+	mSendMsg.text 		= S2_L(ObjSpec, ObjType, AttrData);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S16F11_Request(DataId, PjId, MatFormat, CarrierInfo, RecInfo, StartMethod, PauseEvent) //Process Job Create Enhance Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 16;
+	mSendMsg.function 	= 11;
+	mSendMsg.wbit 		= 1;
+	mSendMsg.text 		= S2_L(DataId, PjId, MatFormat, CarrierInfo, RecInfo, StartMethod, PauseEvent);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S16F15_Request(DataId, PJs) //Process Job Multi Create Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 16;
+	mSendMsg.function 	= 15;
+	mSendMsg.wbit 		= 1;
+	mSendMsg.text 		= S2_L(DataId, PJs);
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S16F19_Request() //Process Job List Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 16;
+	mSendMsg.function 	= 19;
+	mSendMsg.wbit 		= 1;		
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S16F21_Request() //Process Job Create Limit Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 16;
+	mSendMsg.function 	= 21;
+	mSendMsg.wbit 		= 1;		
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+S16F27_Request(CjId, CjCmd, ParaInfo) //Control Job Cmd Request
+{
+	local mSendMsg, mReplyMsg; 
+	mSendMsg 			= NewMessage();
+	mSendMsg.stream 	= 16;
+	mSendMsg.function 	= 27;
+	mSendMsg.wbit 		= 1;
+	mSendMsg.text 		= S2_L(CjId, CjCmd, ParaInfo);	
+	mReplyMsg = wait(SendPrimary(mSendMsg));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	return(mReplyMsg);	
+}
+
+////////////////////////////////----------------------------------------------------///////////////////////////////
+////////////////////////////////        ALL THE REQUEST MESSAGES END IN HERE        ///////////////////////////////
+////////////////////////////////----------------------------------------------------///////////////////////////////
+////////////////////////////////----------------------------------------------------///////////////////////////////
+////////////////////////////////        ALL REPLY MESSAGE PARSERS BEGIN HERE        ///////////////////////////////
+////////////////////////////////----------------------------------------------------///////////////////////////////
+
+S1F4_Parser(S1F4_Reply) //Parsing Vid Values responded by Tool
+{
+	local i, ii, mS1F4List, mReplyInfo, mResults, mFormat, mData;
+	logn("*****    S1F4_Selected Equipment Status Data   *****");
+	mReplyInfo = Decode(S1F4_Reply.text);	
+
+	for (i = 0; i < GetCount(mReplyInfo); i = i + 1)
+	{
+		mValue	= "";
+		mData	= mReplyInfo[i];
+		mFormat = GetFormat(mData);
+
+		if(GetCount(mData) == 0 && mFormat == "L"){ //Empty List
+			mResults = InsertFirst(mValue, mResults);
+		}else if(mFormat == "L"){
+			mData = Smart_Decode(mData);
+			for (ii = 0; ii < GetCount(mData); ii = ii + 1){
+				mValue = S2_Decode(mData[ii]);
+				logn("*****    mValue = ", mValue);	
+				mResults = InsertFirst(mValue, mResults);		
+			}				
+		}else{
+			mValue = S2_Decode(mData);
+			logn("*****    mValue = ", mValue);	
+			mResults = InsertFirst(mValue, mResults);				
+		}	
+	} 	
+	return(Reverse(mResults));
+}
+
+S1F12_Parser(S1F12_Reply) //Parsing SVID NameList Info responded by Tool
+{
+	local i, mReplyInfo, mVidInfo, mVidInfoStruct, mVid, mName, mVidInfos_Dict;
+	logn("*****    S1F12_Status Variable Namelist Reply   *****");
+	mReplyInfo	= Decode(S1F12_Reply.text);
+	mVidInfos_Dict = NewDictionary(VID_STRUCT.vid);
+	
+	for (i = GetCount(mReplyInfo) - 1; i >= 0; i = i - 1)
+	{
+		mVidInfo = Decode(mReplyInfo[i]);
+		mVid	= Smart_Decode(mVidInfo[0]);
+		mName 	= Smart_Decode(mVidInfo[1]);
+		mVidInfoStruct = NewStructured(VID_STRUCT);
+		mVidInfoStruct.vid = mVid;
+		mVidInfoStruct.name = mName;
+		DictionaryInsert (mVidInfoStruct, mVidInfos_Dict);
+	} 	
+	return(mVidInfos_Dict);
+}
+
+S1F14_Parser(S1F14_Reply) //Parsing Tool's info responded by Tool
+{
+	local i, mS1F14List, mReplyInfo, mValues, mValue, mResults;
+	logn("*****    S1F14_Establish Communications Request Acknowledge   *****");
+	mReplyInfo	= Decode(S1F14_Reply.text);
+	mValues		= Decode(mReplyInfo[1]);
+	for (i = GetCount(mValues) - 1; i >= 0; i = i - 1)
+	{
+		mValue = Smart_Decode(mValues[i]);
+		mResults = InsertFirst(mValue, mResults);		
+	} 	
+	return(mResults);
+}
+
+S1F16_Parser(S1F16_Reply) //Parsing Offline request responded by Tool
+{
+	local mCmdAck;
+	logn("*****    S1F16_OFF-LINE Acknowledge   *****");
+	if(IsMessage(S1F16_Reply) && S1F16_Reply.Stream == 1 && S1F16_Reply.Function == 0)
+		logn("*****    Equipment denies OFF-LINE    *****");
+	else{
+		mCmdAck		= S2_Decode(S1F16_Reply.text);	
+		switch(mCmdAck){
+			case 0: logn("*****    ", mCmdAck, ": Ok - Accepted S1F15 Tool Offline Request    *****"); break;
+			case 1: logn("*****    ", mCmdAck, ": Refused S1F15 Tool Offline Request    *****"); break;
+			case 2: logn("*****    ", mCmdAck, ": Tool is currently Offline    *****"); break;
+			default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+		}		
+	}
+}
+
+S1F18_Parser(S1F18_Reply) //Parsing Online request responded by Tool
+{
+	local mCmdAck;
+	logn("*****    S1F18_ON-LINE Acknowledge   *****");
+	mCmdAck	= S2_Decode(S1F18_Reply.text);	
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Accepted S1F17 Tool Online Request    *****"); CTRLREMOTE = 1; break;
+		case 1: logn("*****    ", mCmdAck, ": Refused S1F17 Tool Online Request    *****");	break;
+		case 2: logn("*****    ", mCmdAck, ": Tool is currently Online    *****"); CTRLREMOTE = 1; break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+	
+	if (mCmdAck == 1)
+		return(0);
+	else
+		return(1);
+}
+
+S1F66_Parser(S1F66_Reply) //Parsing OnlineLocal request responded by Tool
+{
+	local mCmdAck;
+	logn("*****    S1F66_ON-LINE LOCAL Acknowledge    *****");
+	mCmdAck	= S2_Decode(S1F66_Reply.text);	
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Accepted S1F65 Tool OnlineLocal Request    *****"); break;
+		case 1: logn("*****    ", mCmdAck, ": Refused S1F65 Tool OnlineLocal Request    *****"); break;
+		case 2: logn("*****    ", mCmdAck, ": Tool is currently OnlineLocal    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+}
+
+S1F68_Parser(S1F68_Reply) //Parsing Offline Remote request responded by Tool
+{
+	local mCmdAck;
+	logn("*****    S1F68_OFF-LINE REMOTE Acknowledge    *****");
+	mCmdAck	= S2_Decode(S1F68_Reply.text);	
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Accepted S1F67 Tool OfflineRemote Request    *****"); break;
+		case 1: logn("*****    ", mCmdAck, ": Refused S1F67 Tool OfflineRemote Request    *****"); break;
+		case 2: logn("*****    ", mCmdAck, ": Tool is currently OfflineRemote    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+}
+
+S2F14_Parser(S2F14_Reply) //Parsing Equipment Constant List Values responded by Tool
+{
+	local mReplyInfo, mValue, mValues;
+	logn("*****    S2F14_Equipment Constant Data   *****");
+	mReplyInfo 	= Decode(S2F14_Reply.text);
+	logn("*****    There're ", GetCount(mReplyInfo), " ECIDs    *****");	
+	
+	for (i = 0; i < GetCount(mReplyInfo); i = i + 1){
+		mValue = Smart_Decode(mReplyInfo[i]);
+		logn("*****    mValue = ", mValue);
+		mValues = InsertFirst(mValue, mValues);
+	}
+	return(Reverse(mValues));
+}
+
+S2F16_Parser(S2F16_Reply) //Parsing Setting ECIDs status responded by Tool
+{
+	local mReplyInfo, mCmdAck;
+	logn("*****    S2F16_New Equipment Constant Acknowledge   *****");
+	mCmdAck	= S2_Decode(S2F16_Reply.text);	
+	
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Accepted ECIDs setting Request    *****"); break;
+		case 1: logn("*****    ", mCmdAck, ": One or more ECIDs does not exist    *****"); break;
+		case 2: logn("*****    ", mCmdAck, ": Tool is currently Busy    *****"); break;
+		case 3: logn("*****    ", mCmdAck, ": One or more values out of range    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+}
+
+S2F18_Parser(S2F18_Reply) //Parsing Date and Time Data
+{
+	logn("*****    S2F18_Date and Time Data   *****");
+	logn("*****    Date/Time: ", Smart_Decode(S2F18_Reply.text), "   *****");
+}
+
+S2F30_Parser(S2F30_Reply) //Parsing Setting EC NameList responded by Tool
+{
+	local i, mReplyInfo, mEcid, mEcidStruct, mId, mName, mECIDs_Dict;
+	logn("*****    S2F30_Equipment Constant Namelist   *****");
+	mReplyInfo	= Decode(S2F30_Reply.text);
+	mECIDs_Dict = NewDictionary(ECID_STRUCT.ecid);
+	
+	for (i = GetCount(mReplyInfo) - 1; i >= 0; i = i - 1)
+	{
+		mEcid 	= Decode(mReplyInfo[i]);
+		mId 	= Smart_Decode(mEcid[0]);
+		mName 	= Smart_Decode(mEcid[1]);
+		mEcidStruct = NewStructured(ECID_STRUCT);
+		mEcidStruct.ecid = mId;
+		mEcidStruct.ecname = mName;
+		DictionaryInsert (mEcidStruct, mECIDs_Dict);
+	} 	
+	return(mECIDs_Dict);
+}
+
+S2F32_Parser(S2F32_Reply) //Parsing Setting Date&Time Status responded by Tool
+{
+	local mCmdAck;
+	logn("*****    S2F32_Date and Time Set Acknowledge   *****");
+	mCmdAck	= S2_Decode(S2F32_Reply.text);
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Accepted Time&Date Request    *****"); break;
+		case 1: logn("*****    ", mCmdAck, ": Not Done Time&Date Setting Request    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+}
+
+S2F34_Parser(S2F34_Reply) //Parsing Define Reports Status responded by Tool
+{
+	local mCmdAck;
+	logn("*****    S2F34_Define Report Acknowledge   *****");
+	mCmdAck	= S2_Decode(S2F34_Reply.text);
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Accepted Define Reports Request    *****"); break;
+		case 1: logn("*****    ", mCmdAck, ": Out of space to perform S2F33 Request    *****"); break;
+		case 2: logn("*****    ", mCmdAck, ": Invalid Format in S2F33 Request    *****"); break;
+		case 3: logn("*****    ", mCmdAck, ": S2F33 has one or more ReportId already defined    *****"); break;
+		case 4: logn("*****    ", mCmdAck, ": S2F33 has one or more invalid VID    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+}
+
+S2F36_Parser(S2F36_Reply) //Parsing Link Event Reports Status responded by Tool
+{
+	local mCmdAck;
+	logn("*****    S2F36_Link Event Report Acknowledge   *****");
+	mCmdAck	= S2_Decode(S2F36_Reply.text);
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Accepted Define Reports Request    *****"); break;
+		case 1: logn("*****    ", mCmdAck, ": Out of space to perform S2F35 Request    *****"); break;
+		case 2: logn("*****    ", mCmdAck, ": Invalid Format in S2F35 Request    *****"); break;
+		case 3: logn("*****    ", mCmdAck, ": S2F35 has one or more CEID links already defined    *****"); break;
+		case 4: logn("*****    ", mCmdAck, ": S2F35 has one or more invalid CEID    *****"); break;
+		case 5: logn("*****    ", mCmdAck, ": S2F35 has one or more invalid ReportID    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+}
+
+S2F38_Parser(S2F38_Reply) //Parsing Setting Events Status responded by Tool
+{
+	local mCmdAck;
+	logn("*****    S2F38_Enable/Disable Event Report Acknowledge   *****");
+	mCmdAck	= S2_Decode(S2F38_Reply.text);
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Enable/Disable All Events    *****"); break;
+		case 1: logn("*****    ", mCmdAck, ": Denied - S2F37 Enable/Disable All Events    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+}
+
+S2F42_Parser(S2F42_Reply) //Parsing Host Command Request Reponded by Tool
+{
+	local mReplyInfo, mCmdAck;
+	logn("*****    S2F42_Host Command Acknowledge   *****");
+	mReplyInfo = Decode(S2F42_Reply.text);
+	mCmdAck	= S2_Decode(mReplyInfo[0]);
+	ParseHCAckCode(mCmdAck);
+}
+
+S2F44_Parser(S2F44_Reply) //Parsing Spool configuration request status responded by Tool
+{
+	local mCmdAck, mReplyInfo, mStreamList;
+	logn("*****    S2F44_Reset Spooling Acknowledge   *****");
+	mReplyInfo	= Decode(S2F44_Reply.text);
+	mCmdAck		= S2_Decode(mReplyInfo[0]);
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Spooling Request Accepted    *****"); break;
+		case 1: logn("*****    ", mCmdAck, ": Denied S2F43 Spooling Request    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+}
+
+S2F50_Parser(S2F50_Reply) //Parsing Carrier Action Status responded by Tool
+{
+	local mCmdAck, mReplyInfo, mAckInfo;
+	logn("*****    S2F50_Enhanced Remote Command Acknowledge   *****");
+	mReplyInfo	= Decode(S2F50_Reply.text);	
+	mCmdAck		= S2_Decode(mReplyInfo[0]);
+	mAckInfo	= Decode(mReplyInfo[1]);
+	ParseCAACK(mCmdAck);
+}
+
+S3F12_Parser(S3F12_Reply) //Parsing Material ID Info responded by Tool
+{
+	local mCmdAck;
+	// mCmdAck	= S2_Decode(S3F12_Reply.text);
+	// switch(mCmdAck){
+		// case 0:
+			// logn("*****    Ok - Enable/Disable Alarm    *****");
+			// break;
+		// default:
+			// logn("*****    Unknown Issue!    *****");
+			// break;			
+	// }
+}
+
+S3F18_Parser(S3F18_Reply) //Parsing Carrier Action Status responded by Tool
+{
+	local mCmdAck, mReplyInfo, mErrorInfo;
+	logn("*****    S3F18_Carrier Action Acknowledge   *****");
+	mReplyInfo	= Decode(S3F18_Reply.text);	
+	mCmdAck		= S2_Decode(mReplyInfo[0]);
+	mErrorInfo	= Decode(mReplyInfo[1]);
+	ParseCAACK(mCmdAck);
+	
+	if(!IsEmptyList(mErrorInfo)){
+		for(i = 0; i < GetCount(mErrorInfo); i = i + 1){
+			mEachError = Decode(mErrorInfo[i]);
+			mEachErrorCode = Smart_Decode(mEachError[0]);
+			mEachErrorText = Smart_Decode(mEachError[1]);
+			logn("*****    ", mEachErrorText);			
+			ParseErrorCode(mEachErrorCode);
+		}		
+	}
+}
+
+S3F26_Parser(S3F26_Reply) //Parsing LoadPort Action Status responded by Tool
+{
+	local mCmdAck, mReplyInfo, mErrorInfo;
+	logn("*****    S3F26_Load Port Action Acknowledge   *****");
+	mReplyInfo	= Decode(S3F26_Reply.text);	
+	mCmdAck		= S2_Decode(mReplyInfo[0]);
+	mErrorInfo	= Decode(mReplyInfo[1]);
+	ParseCAACK(mCmdAck);
+	
+	if(!IsEmptyList(mErrorInfo)){
+		for(i = 0; i < GetCount(mErrorInfo); i = i + 1){
+			mEachError = Decode(mErrorInfo[i]);
+			mEachErrorCode = Smart_Decode(mEachError[0]);
+			mEachErrorText = Smart_Decode(mEachError[1]);
+			logn("*****    ", mEachErrorText);			
+			ParseErrorCode(mEachErrorCode);
+		}		
+	}
+}
+
+S3F28_Parser(S3F28_Reply) //Parsing LP Access Mode Change Request responded by Tool
+{
+	local mCmdAck, mReplyInfo, mErrorInfo, mPortID;
+	logn("*****    S3F28_Change Access Acknowledge   *****");
+	mReplyInfo	= Decode(S3F28_Reply.text);	
+	mCmdAck		= S2_Decode(mReplyInfo[0]);
+	mErrorInfo	= Decode(mReplyInfo[1]);
+	ParseCAACK(mCmdAck);
+	
+	if(!IsEmptyList(mErrorInfo)){
+		for(i = 0; i < GetCount(mErrorInfo); i = i + 1){			
+			mEachError 		= Decode(mErrorInfo[i]);
+			mPortID 		= Smart_Decode(mEachError[0]);
+			logn("*****    PortID: ", mPortID);
+			mEachErrorCode 	= Smart_Decode(mEachError[1]);
+			mEachErrorText 	= Smart_Decode(mEachError[2]);
+			logn("*****    ", mEachErrorText);			
+			ParseErrorCode(mEachErrorCode);
+		}		
+	}
+}
+
+S5F4_Parser(S5F4_Reply) //Parsing Enable/Disable Alarm request status responded by Tool
+{
+	local mCmdAck;
+	logn("*****    S5F4_Enable/Disable Alarm Acknowledge   *****");
+	mCmdAck	= S2_Decode(S5F4_Reply.text);
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Enable/Disable Alarm    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+}
+
+S6F16_Parser(S6F16_Reply) //Parsing Event Report Request Data
+{
+	local mReportList;
+	logn("*****    S6F16_Event Report Data   *****");
+	mS6F16List = Decode(S6F16_Reply.Text);
+	mReportList = Decode(mS6F16List[2]);
+	//GetLPAssociationInfo(mReportList);
+}
+
+S6F24_Parser(S6F24_Reply) //Parsing Spooled Data request status responded by Tool
+{
+	local mCmdAck;
+	logn("*****    S6F24_Request or Purge Spooled Data Ack   *****");
+	mCmdAck = S2_Decode(S6F24_Reply.text);	
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Request or Purge Spooled Data    *****"); break;
+		case 1: logn("*****    ", mCmdAck, ": Tool is currently Busy    *****"); break;
+		case 2: logn("*****    ", mCmdAck, ": No Spool Data    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;			
+	}
+}
+
+S7F2_Parser(S7F2_Reply) //Parsing PP Load Data
+{
+	logn("*****    S7F2_Process Program Load Grant   *****");
+	mPPGNTCode = Smart_Decode(S7F2_Reply.text);
+	ParsePPGNT(mPPGNTCode);	
+}
+
+S7F4_Parser(S7F4_Reply) //Parsing PP Send Acknowledged
+{
+	local mCmdAck;
+	logn("*****    S7F4_Process Program Acknowledge   *****");
+	mCmdAck	= S2_Decode(S7F4_Reply.text);		
+	ParseACKC7(mCmdAck);
+}
+
+S7F6_Parser(S7F6_Reply) //Parsing PP Request Data
+{
+	local mS7F6List;
+	logn("*****    S7F6_Process Program Data   *****");
+	mS7F6List = Decode(S7F6_Reply.Text);
+	if(IsEmptyList(mS7F6List))
+		logn("*****    ERROR: Empty Response! Check Recipe on the Tool    *****");
+	else
+		logn("*****    Your Unformatted Recipe was Uploaded Successfully    *****");
+}
+
+S7F8_Parser(S7F8_Reply) //Parsing PP ID Request Data
+{
+	logn("*****    S7F8_Process Program ID Data   *****");
+}
+
+S7F18_Parser(S7F18_Reply) //Parsing PP Delete Acknowledged
+{
+	logn("*****    S7F18_Delete Process Program Acknowledge   *****");
+	mCmdAck	= S2_Decode(S7F18_Reply.text);	
+	ParseACKC7(mCmdAck);	
+}
+
+S7F20_Parser(S7F20_Reply) //Parsing Current PP Data
+{
+	logn("*****    S7F20_Current Process Program Data    *****");
+	logn("*****    There're ", GetCount(Decode(S7F20_Reply.text)), " Recipes");
+}
+
+S7F24_Parser(S7F24_Reply) //Parsing Formatted PP Send Data
+{
+	local mCmdAck;
+	logn("*****    S7F24_Formatted Process Program Acknowledge   *****");
+	mCmdAck	= S2_Decode(S7F24_Reply.text);	
+	ParseACKC7(mCmdAck);
+}
+
+S7F26_Parser(S7F26_Reply) //Parsing Formatted PP Data
+{
+	local mReplyInfo;
+	logn("*****    S7F26_Formatted Process Program Data   *****");
+	mReplyInfo 	= Decode(S7F26_Reply.text);
+	if(IsEmptyList(mReplyInfo)){
+		logn("*****    ERROR: Empty Response! Check Recipe on the Tool    *****");
+	}else{
+		logn("*****    Your Formatted Recipe was Uploaded Successfully    *****");
+	}
+}
+
+S7F27_Parser(S7F27_Msg) //Process Program Verification Confirm
+{
+	local mReplyInfo, mRecipe, mInfo, mStatusList, mStatus;
+	logn("*****    S7F27_Process Program Verification Confirmed   *****");
+	mReplyInfo	= Decode(S7F27_Msg.text);
+	mRecipe = Smart_Decode(mReplyInfo[0]);
+	logn("*****    Verified Recipe: ", mRecipe, "    *****");
+	mInfo = Decode(mReplyInfo[1]);
+	if(IsEmptyList(mInfo)){
+		mStatus = "Verification Success! No Error!";
+	}else{
+		mStatusList = Decode(mInfo[0]);
+		mStatus = Smart_Decode(mStatusList[2]);		
+	}
+
+	logn("*****    Status: ", mStatus, "    *****");
+}
+
+S7F28_Parser(S7F28_Reply) //Process Program Verification Acknowledge
+{
+	logn("*****    S7F28_Process Program Verification Acknowledge   *****");
+}
+
+S7F29_Parser(S7F29_Msg) //Process Program Verification Inquire
+{
+	local mDataLength;
+	logn("*****    S7F29_Process Program Verification Inquire   *****");
+	mDataLength	= S2_Decode(S7F29_Msg.text);
+	logn("*****    Process Program Inquired: ", mDataLength, " bytes    *****");
+}
+
+S7F30_Parser(S7F30_Reply) //Parsing PP Verification Request
+{
+	local mPPGNTCode;
+	logn("*****    S7F30_Process Program Verification Grant   *****");
+	mPPGNTCode	= Smart_Decode(S7F30_Reply.text);
+	ParsePPGNT(mPPGNTCode);
+}
+
+S7F72_Parser(S7F72_Reply) //Parsing Current Process Recipes Data
+{
+	logn("*****    S7F72_Current Process Recipe List Data   *****");
+	logn("*****    Recipes are in ", GetCount(Decode(S7F72_Reply.text)), " Groups");
+}
+
+S14F2_Parser(S14F2_Reply) //Parsing Attributes data responded by Tool
+{
+	local mReplyInfo, mObjIdInfo, mObjAckInfo, mAttrData, mAttrId, mAttrVal, mmObjId, mObjAck;
+	mReplyInfo 	= Decode(S14F2_Reply.text);	
+	mObjIdInfo	= Decode(mReplyInfo[0]);
+	mObjAckInfo = Decode(mReplyInfo[1]);
+	mObjId 		= S2_Decode(Decode(mObjIdInfo[0])[0]);
+	mAttrData 	= Decode(Decode(mObjIdInfo[0])[1]);
+	mAttrId 	= Smart_Decode(Decode(mAttrData[0])[0]); 
+	mAttrVal 	= S2_Decode(Decode(mAttrData[0])[1]);
+	mObjAck 	= S2_Decode(mObjAckInfo[0]);
+	switch(mObjAck){
+		case 0:
+			logn("*****    ", mObjAck, ": Ok - S14F1 Get Attributes    *****");
+			logn("*****    mObjId: ", mObjId);
+			logn("*****    mAttrId: ", mAttrId);
+			logn("*****    mAttrVal: ", mAttrVal);
+			break;
+		case 1: logn("*****    ", mObjAck, ": Error - S14F1 Get Attributes    *****"); break;
+		default: logn("*****    ", mObjAck, ": Unknown Issue!    *****"); break;			
+	}	
+}
+
+S14F10_Parser(S14F10_Reply) //Parsing Create Object responded by Tool
+{
+	local i, mReplyInfo, mCjId, mObjAckInfo, mObjAck, mErrorInfo, mError, mErrorCode, mErrorText; 
+	local mObjAttrInfo, mAttr, mAttrId, mAttrData;
+	logn("*****    S14F10_Create Object Acknowledge   *****");
+	mReplyInfo 	= Decode(S14F10_Reply.text);	
+	mCjId		= Smart_Decode(mReplyInfo[0]);
+	mObjAttrInfo = Decode(mReplyInfo[1]);
+	mObjAckInfo  = Decode(mReplyInfo[2]);
+	mObjAck 	 = S2_Decode(mObjAckInfo[0]);
+	mErrorInfo   = Decode(mObjAckInfo[1]);
+	
+	if(mObjAck == 0){
+		logn("*****    ", mCjId, " Created Successfully    *****");
+	}else{
+		for(i = 0; i < GetCount(mErrorInfo); i = i + 1){
+			mError 		= Decode(mErrorInfo[i]);		
+			mErrorCode  = S2_Decode(mError[0]);
+			ParseErrorCode(mErrorCode);
+			mErrorText = Smart_Decode(mError[1]);			
+			logn("*****    CJID: ", mCjId, " with ErrCode:", mErrorCode, " and ErrTxt: ", mErrorText);
+		}
+	}
+	logn("*****    S14F10_Parser Done!    *****");
+}
+
+S16F6_Parser(S16F6_Reply) //Parsing PJ Cmd responded by Tool
+{
+	local mReplyInfo, mPjId, mAckInfo, mPJAck;
+	logn("*****    S16F6_Process Job Command Acknowledge   *****");
+	mReplyInfo	= Decode(S16F6_Reply.text);	
+	mPjId		= Smart_Decode(mReplyInfo[0]);
+	mAckInfo	= Decode(mReplyInfo[1]);
+	mPJAck		= S2_Decode(mAckInfo[0]);
+	
+	if(mPJAck == 1){
+		logn("*****    PJCmd Executed for PjId: <", mPjId, "> Successfully    *****");
+	}else{
+		mErrorInfo	= Decode(mAckInfo[1]);
+		for(i = 0; i < GetCount(mErrorInfo); i = i + 1){
+			mError = Decode(mErrorInfo[i]);		
+			mErrorCode = S2_Decode(mError[0]);
+			ParseErrorCode(mErrorCode);
+			mErrorText = Smart_Decode(mError[1]);			
+			logn("*****    mPjId: ", mPjId, " with ErrCode:", mErrorCode, " and ErrTxt: ", mErrorText);
+		}
+	}	
+}
+
+S16F12_Parser(S16F12_Reply) //Parsing PJ Create Enhance Status responded by Tool
+{
+	local i, mPJAck, mReplyInfo, mErrorInfo, mAckInfo, mPjId, mError, mErrorCode, mErrorText;
+	logn("*****    S16F12_PRJobCreateEnh Acknowledge   *****");
+	mReplyInfo	= Decode(S16F12_Reply.text);	
+	mPjId		= Smart_Decode(mReplyInfo[0]);
+	mAckInfo	= Decode(mReplyInfo[1]);
+	mPJAck		= S2_Decode(mAckInfo[0]);
+		
+	if(mPJAck == 1){
+		logn("*****    mPjId: ", mPjId, " created successfully    *****");
+	}else{
+		mErrorInfo	= Decode(mAckInfo[1]);
+		for(i = 0; i < GetCount(mErrorInfo); i = i + 1){
+			mError = Decode(mErrorInfo[i]);		
+			mErrorCode = S2_Decode(mError[0]);
+			ParseErrorCode(mErrorCode);
+			mErrorText = Smart_Decode(mError[1]);			
+			logn("*****    mPjId: ", mPjId, " with ErrCode:", mErrorCode, " and ErrTxt: ", mErrorText);
+		}
+	}
+}
+
+S16F16_Parser(S16F16_Reply) //Parsing PJ Multi Create Status responded by Tool
+{
+	local i, mPJAck, mReplyInfo, mErrorInfo, mPJInfo, mAckInfo, mPjId, mError, mErrorCode, mErrorText;
+	logn("*****    S16F16_PRJobMultiCreate Acknowledge    *****");
+	mReplyInfo	= Decode(S16F16_Reply.text);	
+	mPJInfo		= Decode(mReplyInfo[0]);
+	mAckInfo	= Decode(mReplyInfo[1]);
+	
+	for(i = 0; i < GetCount(mPJInfo); i = i + 1){
+		mPjId = Smart_Decode(mPJInfo[i]);
+	}		
+	mPJAck = S2_Decode(mAckInfo[0]);
+	mErrorInfo = Decode(mAckInfo[1]);
+
+	if(mPJAck == 1){
+		logn("*****    PJ: ", mPjId, " created successfully    *****");
+	}else{
+		for(i = 0; i < GetCount(mErrorInfo); i = i + 1){
+			mError = Decode(mErrorInfo[i]);
+			mErrorCode = S2_Decode(mError[0]);
+			ParseErrorCode(mErrorCode);
+			mErrorText = Smart_Decode(mError[1]);
+			logn("*****    mPjId: ", mPjId, " with ErrCode:", mErrorCode, " and ErrTxt: ", mErrorText);			
+		}		
+	}
+}
+
+S16F20_Parser(S16F20_Reply) //Parsing Process Job List responded by Tool
+{
+	local mReplyInfo, mProcessJobs;
+	logn("*****    S16F20_PRJob List Data    *****");
+	mReplyInfo 	= Decode(S16F20_Reply.text);	
+	logn("*****    There're ", GetCount(mReplyInfo), " PJs    *****");
+
+}
+
+S16F22_Parser(S16F22_Reply) //Parsing Process Job List create limit responded by Tool
+{
+	local mPJLimit, mProcessJobs;
+	logn("*****    S16F22_PRJob Create Limit Data    *****");
+	mPJLimit = S2_Decode(S16F22_Reply.text);	
+	logn("*****    PJ create limit ", mPJLimit, " PJs    *****");
+}
+
+S16F28_Parser(S16F28_Reply) //Parsing Process Job List create limit responded by Tool
+{
+	local mCJAck, mAckInfo, mReplyInfo;
+	logn("*****    S16F28_Control Job Command Acknowledge    *****");
+	mReplyInfo	= Decode(S16F28_Reply.text);	
+	mCJAck		= S2_Decode(mReplyInfo[0]);
+	mAckInfo	= Decode(mReplyInfo[1]);
+	if(mCJAck == 1)
+		logn("*****    ", mCJAck, ": CJ Cmd Acknowledged    *****");	
+	else
+		logn("*****    ", mCJAck, ": CJ Cmd Denied    *****");	
+}
+////////////////////////////////----------------------------------------------------///////////////////////////////
+////////////////////////////////        ALL REPLY MESSAGE PARSERS END IN HERE       ///////////////////////////////
+////////////////////////////////----------------------------------------------------///////////////////////////////
+
+ParseCAACK(CAACKCode){
+	switch(CAACKCode){
+		case 0: logn("*****    ", CAACKCode, ": Ok    *****"); break;
+		case 1: logn("*****    ", CAACKCode, ": Invalid Command    *****"); break;
+		case 2: logn("*****    ", CAACKCode, ": Can't Perform Now    *****"); break;
+		case 3: logn("*****    ", CAACKCode, ": Invalid Data or Argument    *****"); break;
+		case 4: logn("*****    ", CAACKCode, ": Initiated For Asynchronous Completion    *****"); break;
+		case 5: logn("*****    ", CAACKCode, ": Rejected - Invalid State    *****"); break;
+		case 6: logn("*****    ", CAACKCode, ": Command Performed with Error    *****"); break;
+		default: logn("*****    ", CAACKCode, ": Unknown Issue!    *****"); break;			
+	}	 
+}
+
+ParsePPGNT(PPGNTCode){
+	switch(PPGNTCode){
+		case 0: logn("*****    ", PPGNTCode, ": Ok    *****"); break;
+		case 1: logn("*****    ", PPGNTCode, ": Already Have    *****"); break;
+		case 2: logn("*****    ", PPGNTCode, ": No Space    *****"); break;
+		case 3: logn("*****    ", PPGNTCode, ": Invalid PPID    *****"); break;
+		case 4: logn("*****    ", PPGNTCode, ": Busy, Try Later    *****"); break;
+		case 5: logn("*****    ", PPGNTCode, ": Will Not Accept    *****"); break;
+		case 6: logn("*****    ", PPGNTCode, ": Other Error    *****"); break;
+		default: logn("*****    ", PPGNTCode, ": Unknown Issue!    *****"); break;			
+	}	
+}
+
+ParseACKC7(ACKCCode){
+	switch(ACKCCode){
+		case 0: logn("*****    ", ACKCCode, ": Accepted    *****"); break;
+		case 1: logn("*****    ", ACKCCode, ": Permission Not Granted    *****"); break;
+		case 2: logn("*****    ", ACKCCode, ": Length Error    *****"); break;
+		case 3: logn("*****    ", ACKCCode, ": Matrix Overflow    *****"); break;
+		case 4: logn("*****    ", ACKCCode, ": PPID Not Found    *****"); break;
+		case 5: logn("*****    ", ACKCCode, ": Unsupported Mode    *****"); break;
+		case 6: logn("*****    ", ACKCCode, ": Other Error    *****"); break;
+		default: logn("*****    ", ACKCCode, ": Unknown Issue!    *****"); break;			
+	}	
+}
+
+ParseHCAckCode(HcAckCode){
+	switch(HcAckCode){
+		case 0: logn("*****    ", HcAckCode, ": Ok - Command Completed    *****"); break;
+		case 1: logn("*****    ", HcAckCode, ": Invalid Command    *****"); break;
+		case 2: logn("*****    ", HcAckCode, ": Can not Perform Request Now    *****"); break;
+		case 3: logn("*****    ", HcAckCode, ": Has invalid data or argument    *****"); break;
+		case 4: logn("*****    ", HcAckCode, ": Tool Initiated for Asynchronous Completion    *****"); break;
+		case 5: logn("*****    ", HcAckCode, ": Request was Rejected - Invalid State    *****"); break;
+		case 6: logn("*****    ", HcAckCode, ": Invalid Object - Performed with errors    *****"); break;
+		default: logn("*****    ", HcAckCode, ": Unknown Issue!    *****"); break;			
+	}	
+}
+
+ParseErrorCode(ErrCode){
+	switch(ErrCode){
+		case 0: logn("*****    ", ErrCode, ": Ok    *****");break;
+		case 1: logn("*****    ", ErrCode, ": Unknown Object    *****");break;
+		case 2: logn("*****    ", ErrCode, ": Unknown Class    *****");break;
+		case 3: logn("*****    ", ErrCode, ": Unknown Object Instance    *****");break;
+		case 4: logn("*****    ", ErrCode, ": Unknown Attribute Type    *****");break;
+		case 5: logn("*****    ", ErrCode, ": Read-only Attribute    *****");break;
+		case 6: logn("*****    ", ErrCode, ": Unknown Class    *****");break;
+		case 7: logn("*****    ", ErrCode, ": Invalid Attribute Value    *****");break;
+		case 8: logn("*****    ", ErrCode, ": Syntax Error    *****");break;
+		case 9: logn("*****    ", ErrCode, ": Verification Error    *****");break;
+		case 10: logn("*****    ", ErrCode, ": Validation Error    *****");break;
+		case 11: logn("*****    ", ErrCode, ": Object ID in Use    *****");break;
+		case 12: logn("*****    ", ErrCode, ": Improper Parameters    *****");break;
+		case 13: logn("*****    ", ErrCode, ": Missing Parameters    *****");break;
+		case 14: logn("*****    ", ErrCode, ": Unsupported Option Requested    *****");break;
+		case 15: logn("*****    ", ErrCode, ": Busy    *****");break;
+		case 16: logn("*****    ", ErrCode, ": Unavailable    *****");break;
+		case 17: logn("*****    ", ErrCode, ": Command Not Valid in Current State    *****");break;
+		case 18: logn("*****    ", ErrCode, ": No Material Altered    *****");break;
+		case 19: logn("*****    ", ErrCode, ": Partially Processed    *****");break;
+		case 20: logn("*****    ", ErrCode, ": All Material Processed    *****");break;
+		case 21: logn("*****    ", ErrCode, ": Recipe Specification Error    *****");break;
+		case 22: logn("*****    ", ErrCode, ": Failure When Processing    *****");break;
+		case 23: logn("*****    ", ErrCode, ": Failure When not Processing    *****");break;
+		case 24: logn("*****    ", ErrCode, ": Lack of Material    *****");break;
+		case 25: logn("*****    ", ErrCode, ": Job Aborted    *****");break;
+		case 26: logn("*****    ", ErrCode, ": Job Stopped    *****");break;
+		case 27: logn("*****    ", ErrCode, ": Job Canceled    *****");break;
+		case 28: logn("*****    ", ErrCode, ": Cannot Change Selected Recipe    *****");break;
+		case 29: logn("*****    ", ErrCode, ": Unknown Event    *****");break;
+		case 30: logn("*****    ", ErrCode, ": Duplicate Report ID    *****");break;
+		case 31: logn("*****    ", ErrCode, ": Unknown Data Report    *****");break;
+		case 32: logn("*****    ", ErrCode, ": Data Report not Linked    *****");break;
+		case 33: logn("*****    ", ErrCode, ": Unknown Trace Report    *****");break;
+		case 34: logn("*****    ", ErrCode, ": Duplicate Trace ID    *****");break;
+		case 35: logn("*****    ", ErrCode, ": Too Many Reports    *****");break;
+		case 36: logn("*****    ", ErrCode, ": Invalid Sample Period    *****");break;
+		case 37: logn("*****    ", ErrCode, ": Group Size Too Large    *****");break;
+		case 38: logn("*****    ", ErrCode, ": Recovery Action Invalid    *****");break;
+		case 39: logn("*****    ", ErrCode, ": Busy With Previous Recovery    *****");break;
+		case 40: logn("*****    ", ErrCode, ": No Active Recovery    *****");break;
+		case 41: logn("*****    ", ErrCode, ": Recovery Failed    *****");break;
+		case 42: logn("*****    ", ErrCode, ": Recovery Aborted    *****");break;
+		case 43: logn("*****    ", ErrCode, ": Invalid Table Element    *****");break;
+		case 44: logn("*****    ", ErrCode, ": Unknown Table Element    *****");break;
+		case 45: logn("*****    ", ErrCode, ": Cannot Delete Predefined    *****");break;
+		case 46: logn("*****    ", ErrCode, ": Invalid Token    *****");break;
+		case 47: logn("*****    ", ErrCode, ": Invalid Parameter    *****");break;
+		default: logn("*****    ", ErrCode, ": Unknown Issue!    *****");break;			
+	}
+}
+////////////////////////////////////////////////
+// To transform the VID to more meaningful name
+////////////////////////////////////////////////
+LookUpDict(Vids, Values){
+	local i, ii, mVidMap, mFound, mVidStruct, mVidStructValue, mSearch, mValue, find, mVidName;
+	
+	for(i = 0; i < GetCount(Vids); i = i + 1){
+		mVid = Smart_Decode(Vids[i]);
+		//logn("mVid: ", mVid);
+		mValue = Values[i];
+		//logn("mValue: ", mValue);
+		mVidStruct		= NewStructured(VID_STRUCT);
+		mVidStruct.vid	= mVid;
+		mFound 			= DictionaryLookup(mVidStruct, VIDS_DICT);
+		if(mFound){
+			mVidStructValue = mFound.value;
+			//logn("mVidStructValue: ", mVidStructValue);
+			mVidName = mFound.name;
+			//logn("mVidName: ", mVidName);
+			
+			for(ii = 0; ii < GetCount(mVidStructValue); ii = ii + 1 ){
+				mPossibleValue = mVidStructValue[ii];
+				//logn("mPossibleValue: ", mPossibleValue);
+				
+				find = FindString(mPossibleValue, "=");
+
+				if (find.Count != 0){
+					subStr = Substring(mPossibleValue, 0, find.Start);
+					//logn("subStr: ", subStr, " AND mValue: ", mValue);
+					if (AtoI(subStr) == mValue){
+						logn("*****    VID:", mVid, " (", mVidName,  ") = ", mValue, " (", mPossibleValue, ")");
+						break;
+					}
+				}else{
+					logn("*****    VID:", mVid, " (", mVidName,  ") = ", mValue);
+				}						
+			}
+		}
+	}
+}
+
+////////////////////////////////////////////////////////
+// Removing all white spaces in the provided string
+///////////////////////////////////////////////////////
+RemoveWhiteSpace(InStr){
+	local i, mOutStr;
+	for(i = 0; i < GetCount(InStr); i = i + 1){
+		if(InStr[i] != " "){
+			mOutStr = CatString(mOutStr,InStr[i]);
+		}
+	}
+	return (mOutStr);
+}
+
+////////////////////////////////////////////////////////
+// Converting comma separated string to a list 
+///////////////////////////////////////////////////////
+MakeListFromString(item){
+	local i, mResult, subList, commaEnd, commaBegin, subItem;
+	
+	if(FindString(item, " ").Count != 0){
+		item = RemoveWhiteSpace(item);
+	}
+		
+	commaBegin = 0;
+	do
+	{	//If field contains more than one item then they're separated by comma
+		//logn("commaBegin: ", commaBegin);
+		commaEnd = FindString(item, ",", commaBegin);
+		
+		if(commaEnd.Count != 0)
+			subItem = SubString(item, commaBegin, commaEnd.Start - commaBegin); //Get each item in the field
+		else
+			subItem = SubString(item, commaBegin); //The last item in the field
+			
+		//logn("subItem: ", subItem);
+		subList = InsertFirst(subItem, subList); //List all items together					
+		commaBegin = commaEnd.Start + 1;
+	}while(commaEnd.Count != 0); //Do until we don't see the next comma in the field
+	
+	//logn("Size: ", GetCount(subList));
+	return(Reverse(subList));
+}
+
+//////////////////////////////////////////////////////// ALL Stream Functionalities Posted below /////////////////////////////
+////////////////////////////////////////////////////////
+// Sending S1F3 to the tool with the VIDs user provided
+////////////////////////////////////////////////////////
+public S1_F3_GetVids(Vids){
+	local i, mVid, mVids, mCount, mText, mStatus, mSecsVidList, mS1F4_Reply, mValues;
+	if(!IsEmptyList(Vids)){
+		mVids = Vids;
+	}else{
+		mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered all VIDs?\n";
+		do{
+		mVid = GuiGetString("You're requesting VIDs info. Please enter Single or Multiple VIDs with comma separator.");
+		mStatus = GuiMsgBox ("Requesting Vids Info", CatString(mText, mVid), 3);
+		}while (mStatus == 7);
+		
+		if(mStatus == 6){
+			mVids = MakeListFromString(mVid);
+		}else{
+			logn("Terminated per user's request");
+		}			
+	}
+	
+	for(i = 0; i < GetCount(mVids); i = i + 1){
+		mVid = AtoI(mVids[i]);
+		mSecsVidList = InsertFirst(S2_U4(mVid), mSecsVidList);			
+	}		
+	mS1F4_Reply = S1F3_Request(mSecsVidList);	
+	mValues = S1F4_Parser(mS1F4_Reply);
+	//LookUpDict(mSecsVidList, mValues);			
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+// Sending S1F3 to verify whether tool is ready for the Host to take over control
+//////////////////////////////////////////////////////////////////////////////////
+S1_F3_GetSingleVid(Vid)
+{
+	local mVids, mS1F4_Reply, mValue;
+	mVids = NewList(Vid);
+	mS1F4_Reply = S1F3_Request(mVids);	
+	mValue = S1F4_Parser(mS1F4_Reply);
+	return(mValue);	
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+// Sending S1F3 to verify whether tool is ready for the Host to take over control
+//////////////////////////////////////////////////////////////////////////////////
+public S1_F3_IsToolOnlineRemote()
+{
+	local mVids, mS1F4_Reply, mValues;
+	logn(">>>>>> S1F3_IsToolOnlineRemote <<<<<<<");
+	mVids = InsertFirst(S2_U4(33882384), mVids);
+	mVids = InsertFirst(S2_U4(33554448), mVids);
+	mS1F4_Reply = S1F3_Request(mVids);	
+	mValues = S1F4_Parser(mS1F4_Reply);
+	LookUpDict(mVids, mValues);	
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+// Sending S1F3 to verify whether tool is ready for the Host to take over control
+//////////////////////////////////////////////////////////////////////////////////
+public S1_F3_IsRCReady(vid)
+{
+	local mVids, mS1F4_Reply, mValues;
+	logn(">>>>>> S1_F3_IsRCReady <<<<<<<");
+	mVids = InsertFirst(S2_U4(vid), mVids);
+	mS1F4_Reply = S1F3_Request(mVids);	
+	mValues = S1F4_Parser(mS1F4_Reply);
+	if(IsEmptyList(mValues)){
+		return(0);
+	}else if (mValues[0] == "RCReady" || mValues[0] == "Sample" || mValues[0] == 6){
+		return(1);
+	}	
+}
+
+////////////////////////////////////////////////////////
+// Sending S1F11 to the tool with the VIDs user provided
+////////////////////////////////////////////////////////
+public S1_F11_GetVidNameList(){
+	local i, mVid, mVids, mCount, mText, mStatus, mSecsVidList, mS1F12_Reply, mVIDs_Dict;
+	logn(">>>>>> S1_F11_GetVidNameList <<<<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered all VIDs?\n";
+	do{
+	mVid = GuiGetString("You're requesting VIDs info. Please enter Single or Multiple VIDs with comma separator or nothing for all VIDs");
+	mStatus = GuiMsgBox ("Requesting VIDs Info", CatString(mText, mVid), 3);
+	}while (mStatus == 7);
+
+	if(mStatus == 6){
+		if(mVid != ""){
+			mVids = MakeListFromString(mVid);
+			for(i = 0; i < GetCount(mVids); i = i + 1){
+				mVid = AtoI(mVids[i]);
+				mSecsVidList = InsertFirst(S2_U4(mVid), mSecsVidList);			
+			}			
+		}
+
+		mS1F12_Reply = S1F11_Request(mSecsVidList);
+		mVIDs_Dict = S1F12_Parser(mS1F12_Reply);
+		logn("There are: ", GetCount(mVIDs_Dict));	
+		//LookUpDict(mSecsVidList, mValues);			
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+// Sending S1F13 to verify whether tool is ready for the Host to take over control
+//////////////////////////////////////////////////////////////////////////////////
+public S1_F13_GetToolInfo()
+{
+	local mS1F14_Reply, mS1F14List, mToolInfoList, mSoftRev, mCmdAck;
+	logn(">>>>>> S1F13_GetToolInfo <<<<<<<");
+	mS1F14_Reply	= S1F13_Request();	
+	mS1F14List		= Decode(mS1F14_Reply.Text);
+	mCmdAck			= S2_Decode(mS1F14List[0]);
+	mToolInfoList	= Decode(mS1F14List[1]);
+	if(mCmdAck == 0){
+		if(GetCount(mToolInfoList) == 2){
+			TOOLTYPE	= Smart_Decode(mToolInfoList[0]);
+			mSoftRev	= Smart_Decode(mToolInfoList[1]);
+			logn("*****    TOOLTYPE: ", TOOLTYPE);
+			logn("*****    mSoftRev: ", mSoftRev);
+			
+			if(TOOLTYPE == "EagleX" && AtoI(Substring(mSoftRev, 0, 4)) > 3.0)
+				TOOLTYPE = "Intrepid";	
+		}		
+	}else if(mCmdAck == 1){
+		logn("*****    Tool Denied S1F13 Request    *****");
+	}else{
+		logn("*****    Unknown Issue!    *****");
+	}
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S1F15 to the tool to request Tool Offline
+//////////////////////////////////////////////////////////////
+public S1_F15_RequestToolOffline()
+{	
+	local mS1F16_Reply;
+	logn(">>>>>> S1F15_RequestToolOffline <<<<<<<");
+	mS1F16_Reply = S1F15_Request();
+	S1F16_Parser(mS1F16_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S1F17 to the tool to request Tool Online
+//////////////////////////////////////////////////////////////
+public S1_F17_RequestToolOnline()
+{	
+	local mS1F18_Reply;
+	logn(">>>>>> S1F17_RequestToolOnline <<<<<<<");
+	mS1F18_Reply = S1F17_Request();
+	S1F18_Parser(mS1F18_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S1F21 to the tool to request all DVIDs
+//////////////////////////////////////////////////////////////
+public S1_F21_RequestAllDVIDs()
+{	
+	local mS1F22_Reply;
+	logn(">>>>>> S1_F21_RequestAllDVIDs <<<<<<<");
+	mS1F22_Reply = S1F21_Request();
+	//S1F24_Parser(mS1F24_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S1F23 to the tool to request all CEIDs
+//////////////////////////////////////////////////////////////
+public S1_F23_RequestAllCEIDs()
+{	
+	local mS1F24_Reply;
+	logn(">>>>>> S1_F23_RequestAllCEIDs <<<<<<<");
+	mS1F24_Reply = S1F23_Request();
+	//S1F24_Parser(mS1F24_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S1F65 to the tool to request Tool OnlineLocal
+//////////////////////////////////////////////////////////////
+public S1_F65_RequestToolOnlineLocal()
+{	
+	local mS1F66_Reply;
+	logn(">>>>>> S1F65_RequestToolOnlineLocal <<<<<<<");
+	mS1F66_Reply = S1F65_Request();
+	S1F66_Parser(mS1F66_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S1F67 to the tool to request Tool OnlineRemote
+//////////////////////////////////////////////////////////////
+public S1_F67_RequestToolOnlineRemote()
+{	
+	local mS1F68_Reply;
+	logn(">>>>>> S1F67_RequestToolOnlineRemote <<<<<<<");
+	mS1F68_Reply = S1F67_Request();
+	S1F68_Parser(mS1F68_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F13 to the tool to request CEID list
+//////////////////////////////////////////////////////////////
+public S2_F13_GettingAllEcidValues()
+{	
+	local mS2F14_Reply;
+	logn(">>>>>> S2F13_GettingAllECIDs <<<<<<<");
+	mS2F14_Reply = S2F13_Request();
+	S2F14_Parser(mS2F14_Reply);
+}
+
+////////////////////////////////////////////////////////
+// Sending S2F13 to the tool with the ECIDs user provided
+////////////////////////////////////////////////////////
+public S2_F13_GetSomeEcidValues(){
+	local i, mEcId, mEcIds, mCount, mText, mStatus, mSecsEcIdList, mS1F4_Reply, mValues;
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered all ECIDs?\n";
+	do{
+	mEcId = GuiGetString("You're requesting ECIDs info. Please enter Single or Multiple ECIDs with comma separator.");
+	mStatus = GuiMsgBox ("Requesting ECIDs Info", CatString(mText, mEcId), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){
+		mEcIds = MakeListFromString(mEcId);
+		for(i = 0; i < GetCount(mEcIds); i = i + 1){
+			mEcId = AtoI(mEcIds[i]);
+			mSecsEcIdList = InsertFirst(S2_U4(mEcId), mSecsEcIdList);			
+		}		
+		mS2F14_Reply = S2F13_Request(mSecsEcIdList);	
+		mValues = S2F14_Parser(mS2F14_Reply);
+		logn("mValues: ", mValues);
+		//LookUpDict(mSecsEcIdList, mValues);			
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+////////////////////////////////////////////////////////
+// Sending S2F13 to the tool with the ECIDs user provided
+////////////////////////////////////////////////////////
+public S2_F15_SetEquipmentConstants(){
+	local i, mEcId, mEcIds, mCount, mText, mStatus, mSecsEcIdList, mS1F6_Reply, mValues, mValue, mObjFound, mNameValuePair;
+	logn(">>>>>> S2_F15_SetEquipmentConstants <<<<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered all ECIDs?\n";
+	do{
+	mEcId = GuiGetString("You're setting ECIDs values. Please enter Single or Multiple pairs ECIDs=Values with comma separator. For instance, 12345=123, 45678=234");
+	mStatus = GuiMsgBox ("Setting ECIDs Values", CatString(mText, mEcId), 3);
+	}while (mStatus == 7);
+		
+	if(mStatus == 6){
+		mEcIds = MakeListFromString(mEcId);
+		
+		for(i = 0; i < GetCount(mEcIds); i = i + 1){
+			mNameValuePair = NewList();			
+			mEcIdAndValue = mEcIds[i];			
+			mObjFound = FindString(mEcIdAndValue, "=", 0);
+				
+			if(mObjFound.Count == 0){
+				mStatus = GuiMsgBox ("Your Setting ECIDs Values Invalid", "Format should be Ecid1=Val1, Ecid2=Val2", 0);
+				return;
+			}
+			mEcId = AtoI(SubString(mEcIdAndValue, 0, mObjFound.Start)); //SubString from begin to "="		
+			
+			mValue = SubString(mEcIdAndValue, mObjFound.Start + 1); //SubString from "=" to end
+			mObjFound = FindString(mValue, ".", 0);
+			if(mObjFound.Count == 0){
+				if(mValue == "True"){
+					mNameValuePair = InsertFirst(S2_BOOLEAN(1), mNameValuePair);
+				}else if(mValue == "False"){
+					mNameValuePair = InsertFirst(S2_BOOLEAN(0), mNameValuePair);
+				}else{
+					mValue = AtoI(mValue);
+					mNameValuePair = InsertFirst(S2_U2(mValue), mNameValuePair); //U2: 0 to 65,535						
+				}
+			}else{
+				mValue = AtoR(mValue);
+				mNameValuePair = InsertFirst(S2_F4(mValue), mNameValuePair); 
+			}
+
+			mNameValuePair = InsertFirst(S2_U4(mEcId), mNameValuePair); //U4: 0 to 4,294,967,295	
+			mSecsEcIdList = InsertFirst(S2_L(mNameValuePair), mSecsEcIdList);	
+		}		
+		mS2F16_Reply = S2F15_Request(mSecsEcIdList);	
+		S2F16_Parser(mS2F16_Reply);
+		
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+////////////////////////////////////////////////////////
+// Sending S2F29 to the tool with the ECIDs user provided
+////////////////////////////////////////////////////////
+public S2_F29_GetEcidNameList(){
+	local i, mEcId, mEcIds, mCount, mText, mStatus, mSecsEcIdList, mS2F30_Reply, mECIDs_Dict;
+	logn(">>>>>> S2_F29_GetEcidNameList <<<<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered all ECIDs?\n";
+	do{
+	mEcId = GuiGetString("You're requesting ECIDs info. Please enter Single or Multiple ECIDs with comma separator or nothing for all ECIDs");
+	mStatus = GuiMsgBox ("Requesting ECIDs Info", CatString(mText, mEcId), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){
+		if(mEcId != ""){
+			mEcIds = MakeListFromString(mEcId);
+			for(i = 0; i < GetCount(mEcIds); i = i + 1){
+				mEcId = AtoI(mEcIds[i]);
+				mSecsEcIdList = InsertFirst(S2_U4(mEcId), mSecsEcIdList);			
+			}			
+		}
+	
+		mS2F30_Reply = S2F29_Request(mSecsEcIdList);
+		mECIDs_Dict = S2F30_Parser(mS2F30_Reply);
+		logn("There are: ", GetCount(mECIDs_Dict));	
+		//LookUpDict(mSecsEcIdList, mValues);			
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F31 to the tool to set specific format Time&Date
+//////////////////////////////////////////////////////////////
+S2_F31_SetDateTimeNow()
+{	
+	local mS2F32_Reply;
+	logn(">>>>>> S1F13_GetToolInfo <<<<<<<");
+	mS2F32_Reply = S2F31_Request("180310143455");
+	S2F32_Parser(mS2F32_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F37 to the tool to delete all existing reports
+//////////////////////////////////////////////////////////////
+public S2_F33_DeleteAllExistingReports()
+{
+	local mS2F34_Reply;
+	logn(">>>>>> S2F33_DeleteAllExistingReports <<<<<<<");
+	mS2F34_Reply = S2F33_Request(0);
+	S2F34_Parser(mS2F34_Reply);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// Sending S2F35 to the tool to Disassociate an Event with all linked Reports 
+/////////////////////////////////////////////////////////////////////////////
+public S2_F35_DisassociateEventWithReports(){
+	local i, mCeId, mCeIds, mText, mStatus, mS2F36_Reply;
+	logn(">>>>>> S2F35_DisassociateEventWithReports <<<<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered all CeIds ?\n";
+	do{
+	mCeId = GuiGetString("You're requesting to Disassociate Events with Reports. Please enter Single or Multiple CeIds with comma separator.");
+	mStatus = GuiMsgBox ("Disassociate Events With All Linked Reports on Tool", CatString(mText, mCeId), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){
+		mCeIds = MakeListFromString(mCeId);
+		for(i = 0; i < GetCount(mCeIds); i = i + 1){
+			mCeId = AtoI(mCeIds[i]);			
+			mS2F36_Reply = S2F35_Request(111, S2_L(S2_L(mCeId), S2_L()));
+			S2F36_Parser(mS2F36_Reply);
+		}
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F37 to the tool to enable all CeIds the tool has
+//////////////////////////////////////////////////////////////
+public S2_F37_EnableAllEvents()
+{	
+	local mS2F38_Reply;
+	logn(">>>>>> S2F37_EnableAllEvents <<<<<<<");
+	mS2F38_Reply = S2F37_Request(1);
+	S2F38_Parser(mS2F38_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F37 to the tool to disable all CeIds the tool has
+//////////////////////////////////////////////////////////////
+public S2_F37_DisableAllEvents()
+{	
+	local mS2F38_Reply;
+	logn(">>>>>> S2F37_DisableAllEvents <<<<<<<");
+	mS2F38_Reply = S2F37_Request(0);
+	S2F38_Parser(mS2F38_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F37 to the tool to enable the CeIds user provided
+//////////////////////////////////////////////////////////////
+public S2_F37_EnableSomeEvents(){
+	local i, mCeId, mCeIds, mText, mStatus, mSecsVidList, mS2F38_Reply;
+	logn(">>>>>> S2F37_EnableSomeEvents <<<<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered all CeIds ?\n";
+	do{
+	mCeId = GuiGetString("You're requesting to enable Events\nPlease enter Single or Multiple CeIds with comma separator.");
+	mStatus = GuiMsgBox ("Enable Events on Tool", CatString(mText, mCeId), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){
+		mCeIds = MakeListFromString(mCeId);
+		for(i = 0; i < GetCount(mCeIds); i = i + 1){
+			mCeId = AtoI(mCeIds[i]);
+			mSecsVidList = InsertFirst(S2_U4(mCeId), mSecsVidList);			
+		}		
+		mS2F38_Reply = S2F37_Request(1, mSecsVidList);	
+		S2F38_Parser(mS2F38_Reply);
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F43 to the tool to turn off all streams
+//////////////////////////////////////////////////////////////
+public S2_F43_TurnOffAllStreamSpooling()
+{	
+	local mS2F38_Reply;
+	logn(">>>>>> S2F43_TurnOffAllStreamSpooling <<<<<<<");
+	mS2F44_Reply = S2F43_Request();
+	S2F44_Parser(mS2F44_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 to the tool's LP1 with a specific command
+//////////////////////////////////////////////////////////////
+public S2_F49_SendEnhancedRemoteCommand(ObjSpec, RCmd, Settings)
+{	
+	local mCommand, mText, mStatus, mS2F50_Reply, mObjSpec, mRemoteCmd, mRemCmd, mList;
+	logn(">>>>>> S2F49_SendEnhancedRemoteCommand_LP1 <<<<<<<");
+	
+	if(ObjSpec && RCmd){
+		mObjSpec 	= ObjSpec;
+		mRemoteCmd 	= RCmd;
+	}else{
+		mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct Command ?\n";
+		do{
+			mRemCmd = GuiGetString("You're requesting to send an Enhanced Remote Command. Please enter correct Command in the format: <ObjSpec, RCmd> (Eg. TM:LP1, LPOut)");
+			mStatus = GuiMsgBox ("Send Enhanced Remote Command <ObjSpec, RCmd> your specified as ==> ", CatString(mText, mRemoteCmd), 3);
+		}while (mStatus == 7);
+		
+		if(mStatus == 6){		
+			mList = ConvertStringToList(mRemCmd);
+			if(IsEmptyList(mList)){
+				logn("******** INVALID ENTRY ********");
+				return;
+			}else{
+				mObjSpec	= mList[0];
+				mRemoteCmd	= mList[1];
+			}
+		}else{
+			logn("Terminated per user's request");
+			return;
+		}			
+	}
+	
+	mS2F50_Reply = S2F49_Request(S2_U4(0), S2_A(mObjSpec), S2_A(mRemoteCmd), S2_L(Settings));
+	S2F50_Parser(mS2F50_Reply);	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 to the tool to request LP1 CIDIDRead
+//////////////////////////////////////////////////////////////
+S2_F49_SETCONTROLMODE_Request()
+{	
+	logn(">>>>>> S2_F49_SETCONTROLMODE_Request <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand("TM:LP1", "LPChangeHost", S2_L(S2_A("HostMode"), S2_U4(1))); //0:Remote, 1:Local
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 to the tool to Initialize Reactors
+//////////////////////////////////////////////////////////////
+S2_F49_ReactorsInitialize_Request()
+{	
+	logn(">>>>>> S2_F49_ReactorsInitialize_Request <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand("TM:ALL", "TMAlarmReset");
+	S2_F49_SendEnhancedRemoteCommand("PM1:ALL", "PMAlarmReset");
+	S2_F49_SendEnhancedRemoteCommand("PM2:ALL", "PMAlarmReset");
+	S2_F49_SendEnhancedRemoteCommand("PM3:ALL", "PMAlarmReset");
+	S2_F49_SendEnhancedRemoteCommand("TM:FERB", "MTRInitialize");
+	S2_F49_SendEnhancedRemoteCommand("TM:BERB", "MTRInitialize");
+	S2_F49_SendEnhancedRemoteCommand("TM:ALN", "ALNInitialize");
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 to the tool to request LP1 CIDIDRead
+//////////////////////////////////////////////////////////////
+public S2_F49_LP1_CIDIDRead_Request()
+{	
+	logn(">>>>>> S2_F49_LP1_CIDIDRead_Request <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand("TM:CID1", "CIDIDRead");
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 to the tool to request LP1 MAP
+//////////////////////////////////////////////////////////////
+public S2_F49_LP1_MAP_Request()
+{	
+	logn(">>>>>> S2_F49_LP1MapRequest <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand("TM:LP1", "LPMap", S2_L(S2_A("PURGE"), S2_U4(0)));
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 to the tool to request LP1 UnClamp
+//////////////////////////////////////////////////////////////
+public S2_F49_LP1_UNCLAMP_Request()
+{	
+	logn(">>>>>> S2_F49_LP1_UNCLAMP_Request <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand("TM:LP1", "LPUnClamp");
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 to the tool to request LP1 Clamp
+//////////////////////////////////////////////////////////////
+S2_F49_LPClamp_LP(PortID){	
+	logn(">>>>>> S2F49_LPClamp_LP", PortID, " <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand(CatString("TM:LP", ToAscii(PortID)), "LPClamp");
+}
+public S2_F49_LPClamp_LP1() {S2_F49_LPClamp_LP(1);}
+public S2_F49_LPClamp_LP2() {S2_F49_LPClamp_LP(2);}
+public S2_F49_LPClamp_LP3() {S2_F49_LPClamp_LP(3);}
+public S2_F49_LPClamp_LP4() {S2_F49_LPClamp_LP(4);}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 LPLoadRequest for specific LoadPort  
+//////////////////////////////////////////////////////////////
+S2_F49_LPLoadRequest_LP(PortID){	
+	logn(">>>>>> S2F49_LPLoadRequest_LP", PortID, " <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand(CatString("TM:LP", ToAscii(PortID)), "LPLoadRequest");
+}
+public S2_F49_LPLoadRequest_LP1() {S2_F49_LPLoadRequest_LP(1);}
+public S2_F49_LPLoadRequest_LP2() {S2_F49_LPLoadRequest_LP(2);}
+public S2_F49_LPLoadRequest_LP3() {S2_F49_LPLoadRequest_LP(3);}
+public S2_F49_LPLoadRequest_LP4() {S2_F49_LPLoadRequest_LP(4);}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 LPUnLoadRequest for specific LoadPort
+//////////////////////////////////////////////////////////////
+S2_F49_LPUnLoadRequest_LP(PortID){	
+	logn(">>>>>> S2F49_LPUnLoadRequest_LP", PortID, " <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand(CatString("TM:LP", ToAscii(PortID)), "LPUnLoadRequest");
+}
+public S2_F49_LPUnLoadRequest_LP1() {S2_F49_LPUnLoadRequest_LP(1);}
+public S2_F49_LPUnLoadRequest_LP2() {S2_F49_LPUnLoadRequest_LP(2);}
+public S2_F49_LPUnLoadRequest_LP3() {S2_F49_LPUnLoadRequest_LP(3);}
+public S2_F49_LPUnLoadRequest_LP4() {S2_F49_LPUnLoadRequest_LP(4);}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 LPOut for specific LoadPort  
+//////////////////////////////////////////////////////////////
+S2_F49_LPOut_LoadPort(PortID) {
+	logn(">>>>>> S2F49_LPOut_LoadPort", PortID, " <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand(CatString("TM:LP", ToAscii(PortID)), "LPOut");
+}
+public S2_F49_LPOut_LoadPort1() {S2_F49_LPOut_LoadPort(1);}
+public S2_F49_LPOut_LoadPort2() {S2_F49_LPOut_LoadPort(2);}
+public S2_F49_LPOut_LoadPort3() {S2_F49_LPOut_LoadPort(3);}
+public S2_F49_LPOut_LoadPort4() {S2_F49_LPOut_LoadPort(4);}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 to the tool to request LP1 In
+//////////////////////////////////////////////////////////////
+public S2_F49_LP1_IN_Request()
+{	
+	logn(">>>>>> S2_F49_LP1_IN_Request <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand("TM:LP1", "LPIn");
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 to the tool to request LP1 UnDock
+//////////////////////////////////////////////////////////////
+public S2_F49_LP1_UNDOCK_Request()
+{	
+	logn(">>>>>> S2_F49_LP1_UNDOCK_Request <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand("TM:LP1", "LPUnDock");
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S2F49 to the tool to request LP1 Dock
+//////////////////////////////////////////////////////////////
+public S2_F49_LP1_DOCK_Request()
+{	
+	logn(">>>>>> S2_F49_LP1_DOCK_Request <<<<<<<");
+	S2_F49_SendEnhancedRemoteCommand("TM:LP1", "LPDock");
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F11 to the tool to request LP1's Material Info
+//////////////////////////////////////////////////////////////
+public S3_F11_LP1MaterialInfoRequest()
+{	
+	local mS3F12_Reply;
+	logn(">>>>>> S3F11_LP1MaterialInfoRequest <<<<<<<");
+	mS3F12_Reply = S3F11_Request(1);
+	//S3F12_Parser(mS3F12_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F17 Carrier Action Request
+//////////////////////////////////////////////////////////////
+public S3_F17_CarrierActionRequest(CarrierAction, CarrierID, PortID){
+	local mS3F18_Reply;
+	CID = CarrierID;
+	logn(">>>>>> S3F17_", CarrierAction, " Carrier", CarrierID, " LP", PortID, " <<<<<<<");	
+	mS3F18_Reply = S3F17_Request(
+								S2_U4(0), 
+								S2_A(CarrierAction), 
+								S2_A(CarrierID),
+								S2_U1(PortID),
+								S2_L()
+								);
+	S3F18_Parser(mS3F18_Reply);	
+}
+public S3_F17_ReleaseCarrier1_LP1() {S3_F17_CarrierActionRequest("CarrierRelease", "1", 1);}
+public S3_F17_ProceedWithCarrier1_LP1() {S3_F17_CarrierActionRequest("ProceedWithCarrier", "1", 1);}
+public S3_F17_ProceedWithCarrier2_LP2() {S3_F17_CarrierActionRequest("ProceedWithCarrier", "2", 2);}
+public S3_F17_ProceedWithCarrier3_LP3() {S3_F17_CarrierActionRequest("ProceedWithCarrier", "3", 3);}
+public S3_F17_ProceedWithCarrier4_LP4() {S3_F17_CarrierActionRequest("ProceedWithCarrier", "4", 4);}
+public S3_F17_CancelCarrier1_LP1() {S3_F17_CarrierActionRequest("CancelCarrier", "1", 1);}
+public S3_F17_CancelCarrier2_LP2() {S3_F17_CarrierActionRequest("CancelCarrier", "2", 2);}
+public S3_F17_CancelCarrier3_LP3() {S3_F17_CarrierActionRequest("CancelCarrier", "3", 3);}
+public S3_F17_CancelCarrier4_LP4() {S3_F17_CarrierActionRequest("CancelCarrier", "4", 4);}
+public S3_F17_CarrierReCreateCarrier1_LP1() {S3_F17_CarrierActionRequest("CarrierReCreate", "1", 1);}
+public S3_F17_CarrierReCreateCarrier2_LP2() {S3_F17_CarrierActionRequest("CarrierReCreate", "2", 2);}
+public S3_F17_CarrierReCreateCarrier3_LP3() {S3_F17_CarrierActionRequest("CarrierReCreate", "3", 3);}
+public S3_F17_CarrierReCreateCarrier4_LP4() {S3_F17_CarrierActionRequest("CarrierReCreate", "4", 4);}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F17 with Bind Service Request For LoadPort1
+//////////////////////////////////////////////////////////////
+public S3_F17_BindServiceRequest_LP1(BindInfo)
+{	
+	local i, mLotIdAndWaferIds, mLotID, mWaferID, mText, mStatus, mS3F18_Reply, mBindInfo, mFirstEntry, mSlotMap, mContentMap;
+	logn(">>>>>> S3_F17_BindServiceRequest_LP1 <<<<<<<");
+	
+	if(IsString(BindInfo)){
+		mLotIdAndWaferIds = BindInfo;
+		mStatus = 6;
+	}else{
+		mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct Bind Info ?\n";
+		do{
+			mLotIdAndWaferIds = GuiGetString("You're requesting to send Bind cmd on LP1\nPlease enter your LotId and WaferIds.\nEg. LotABC: WaferA, WaferB, WaferC, ...");
+			mStatus = GuiMsgBox ("Binding on LP1", CatString(mText, mLotIdAndWaferIds), 3);
+		}while (mStatus == 7);		
+	}
+	
+	if(mStatus == 6){
+		mBindInfo = MakeListFromString(mLotIdAndWaferIds);
+		mFirstEntry = mBindInfo[0];
+
+		mObjFound = FindString(mFirstEntry, ":", 0);
+		if(mObjFound.Count == 0){
+			mStatus = GuiMsgBox ("Provided Bind Info is Invalid", "Format must be LotABC: WaferA, WaferB, WaferC, ...", 0);
+			return;
+		}
+		
+		mLotID 		= SubString(mFirstEntry, 0, mObjFound.Start);
+		mWaferID 	= SubString(mFirstEntry, mObjFound.Start + 1);		
+		mWaferInfo 	= InsertFirst(S2_A(mWaferID), mWaferInfo); 
+		mWaferInfo 	= InsertFirst(S2_A(mLotID), mWaferInfo); 
+		mContentMap = InsertFirst(S2_L(mWaferInfo), mContentMap);
+		mSlotMap 	= InsertFirst(S2_U1(3), mSlotMap);	
+		LP1_CID 	= mLotID;
+		
+		for( i = 1; i < GetCount(mBindInfo); i = i + 1){
+			mWaferInfo 	= NewList();
+			mWaferID 	= mBindInfo[i];	
+			mWaferInfo 	= InsertFirst(S2_A(mWaferID), mWaferInfo); 
+			mWaferInfo 	= InsertFirst(S2_A(mLotID), mWaferInfo); 
+			mContentMap = InsertFirst(S2_L(mWaferInfo), mContentMap);
+			mSlotMap 	= InsertFirst(S2_U1(3), mSlotMap);			
+		}
+		
+		for( i = GetCount(mContentMap); i < 25; i = i + 1){
+			mContentMap = InsertFirst(S2_L(S2_A(""), S2_A("")), mContentMap);
+			mSlotMap 	= InsertFirst(S2_U1(1), mSlotMap);			
+		}	
+									
+		mS3F18_Reply = S3F17_Request(
+										S2_U4(0), 
+										S2_A("Bind"), 
+										S2_A(mLotID), 
+										S2_U1(1), 
+										S2_L(
+											S2_L(
+												S2_A("Capacity"), 
+												S2_U1(25)
+											),
+											S2_L(
+												S2_A("ContentMap"),
+												S2_L(Reverse(mContentMap))
+											),
+											S2_L(
+												S2_A("SlotMap"),
+												S2_L(Reverse(mSlotMap))
+											),
+											S2_L(
+												S2_A("SubstrateCount"),
+												S2_U1(GetCount(mBindInfo))
+											),
+											S2_L(
+												S2_A("Usage"),
+												S2_A("PRODUCT")
+											)
+										)
+									);
+		S3F18_Parser(mS3F18_Reply);
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F17 'ProceedWithCarrier' Action For LoadPort1
+//////////////////////////////////////////////////////////////
+public S3_F17_ProceedWithCarrier_LP1(CarrierId)
+{	
+	local mText, mStatus, mS3F18_Reply;
+	logn(">>>>>> S3F17_LP1_ProceedWithCarrier <<<<<<<");
+	if(CarrierID){
+		CID = CarrierID;
+		mStatus = 6;
+	}else{
+		mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct CarrierId ?\n";
+		do{
+			CID = GuiGetString("You're requesting to send ProceedWithCarrier on LP1\nPlease enter correct CarrierId");
+			mStatus = GuiMsgBox ("ProceedWithCarrier on LP1", CatString(mText, CID), 3);
+		}while (mStatus == 7);
+	}
+	
+	if(mStatus == 6){		
+		S3_F17_CarrierActionRequest("ProceedWithCarrier", "1", 1);
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F17 'ProceedWithCarrier' Action For LoadPort1
+//////////////////////////////////////////////////////////////
+public S3_F17_ProceedWithCarrier_SlotMap_LP1()
+{	
+	local mCarrierId, mText, mStatus, mS3F18_Reply;
+	logn(">>>>>> S3F17_LP1_ProceedWithCarrier_SlotMap <<<<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct CarrierId ?\n";
+	do{
+		mCarrierId = GuiGetString("You're requesting to send ProceedWithCarrier on LP1\nPlease enter correct CarrierId");
+		mStatus = GuiMsgBox ("ProceedWithCarrier on LP1", CatString(mText, mCarrierId), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){		
+		mS3F18_Reply = S3F17_Request(
+									S2_U4(0), 
+									S2_A("ProceedWithCarrier"), 
+									S2_A(mCarrierId), 
+									S2_U1(1), 
+									S2_L(
+										S2_A("ContentMap"),
+										S2_L(
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".1"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".2"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".3"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".4"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".5"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".6"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".7"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".8"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".9"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".10"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".11"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".12"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".13"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".14"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".15"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".16"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".17"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".18"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".19"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".20"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".21"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".22"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".23"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".24"))										
+												),
+											S2_L(
+												S2_A(mCarrierId), 
+												S2_A(CatString(mCarrierId, ".25"))										
+												)
+											)
+										)
+									);
+		S3F18_Parser(mS3F18_Reply);
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F25 to the tool to change LP1's Status to OOS
+//////////////////////////////////////////////////////////////
+public S3F25_ChangeToOutOfService_LP1()
+{	
+	local mS3F26_Reply;
+	logn(">>>>>> S3F25_ChangeToOutOfService_LP1 <<<<<<<");
+	mS3F26_Reply = S3F25_Request(
+									S2_A("ChangeServiceStatus"), //PortAction 
+									S2_U1(1), //PortID 
+									S2_L(
+										S2_L(
+											S2_A("ServiceStatus"), 
+											S2_U1(0) //0: OUT OF SERVICE, 1:IN SERVICE
+										)
+									)
+								);
+	S3F26_Parser(mS3F26_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F25 to the tool to change LP2's Status to OOS
+//////////////////////////////////////////////////////////////
+public S3F25_ChangeToOutOfService_LP2()
+{	
+	local mS3F26_Reply;
+	logn(">>>>>> S3F25_ChangeToOutOfService_LP2 <<<<<<<");
+	mS3F26_Reply = S3F25_Request(
+									S2_A("ChangeServiceStatus"), //PortAction 
+									S2_U1(2), //PortID 
+									S2_L(
+										S2_L(
+											S2_A("ServiceStatus"), 
+											S2_U1(0) //0: OUT OF SERVICE, 1:IN SERVICE
+										)
+									)
+								);
+	S3F26_Parser(mS3F26_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F25 to the tool to change LP1's Status to IS
+//////////////////////////////////////////////////////////////
+public S3F25_ChangeToInService_LP1()
+{	
+	local mS3F26_Reply;
+	logn(">>>>>> S3F25_ChangeToInService_LP1 <<<<<<<");
+	mS3F26_Reply = S3F25_Request(
+									S2_A("ChangeServiceStatus"), //PortAction 
+									S2_U1(1), //PortID 
+									S2_L(
+										S2_L(
+											S2_A("ServiceStatus"), 
+											S2_U1(1) //0: OUT OF SERVICE, 1:IN SERVICE
+										)
+									)
+								);
+	S3F26_Parser(mS3F26_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F25 to the tool to change LP2's Status to IS
+//////////////////////////////////////////////////////////////
+public S3F25_ChangeToInService_LP2()
+{	
+	local mS3F26_Reply;
+	logn(">>>>>> S3F25_ChangeToInService_LP2 <<<<<<<");
+	mS3F26_Reply = S3F25_Request(
+									S2_A("ChangeServiceStatus"), //PortAction 
+									S2_U1(2), //PortID 
+									S2_L(
+										S2_L(
+											S2_A("ServiceStatus"), 
+											S2_U1(1) //0: OUT OF SERVICE, 1:IN SERVICE
+										)
+									)
+								);
+	S3F26_Parser(mS3F26_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F25 to the tool to make Reservation LP1
+//////////////////////////////////////////////////////////////
+public S3F25_ChangeToReservation_LP1()
+{	
+	local mS3F26_Reply;
+	logn(">>>>>> S3F25_ChangeToReservation_LP1 <<<<<<<");
+	mS3F26_Reply = S3F25_Request(
+									S2_A("ReservationAtPort"), //PortAction 
+									S2_U1(1), //PortID 
+									S2_L(
+										S2_L(
+											S2_A("ServiceStatus"), 
+											S2_U1(1) //0: OUT OF SERVICE, 1:IN SERVICE
+										)
+									)
+								);
+	S3F26_Parser(mS3F26_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F27 to the tool to change LP1 to MANUAL Mode
+//////////////////////////////////////////////////////////////
+public S3F27_ChangeToManualMode_LP1()
+{	
+	local mS3F28_Reply;
+	logn(">>>>>  S3F27_ChangeToManualMode_LP1  <<<<<");
+	mS3F28_Reply = S3F27_Request(S2_U1(0), S2_L(S2_U1(1)));
+	S3F28_Parser(mS3F28_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F27 to the tool to change LP2 to MANUAL Mode
+//////////////////////////////////////////////////////////////
+public S3F27_ChangeToManualMode_LP2()
+{	
+	local mS3F28_Reply;
+	logn(">>>>>  S3F27_ChangeToManualMode_LP2  <<<<<");
+	mS3F28_Reply = S3F27_Request(S2_U1(0), S2_L(S2_U1(2)));
+	S3F28_Parser(mS3F28_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F27 to the tool to change LP1 to AUTO Mode
+//////////////////////////////////////////////////////////////
+public S3F27_ChangeToAutoMode_LP1()
+{	
+	local mS3F28_Reply;
+	logn(">>>>>  S3F27_ChangeToAutoMode_LP1  <<<<<");
+	mS3F28_Reply = S3F27_Request(S2_U1(1), S2_L(S2_U1(1)));
+	S3F28_Parser(mS3F28_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S3F27 to the tool to change LP2 to AUTO Mode
+//////////////////////////////////////////////////////////////
+public S3F27_ChangeToAutoMode_LP2()
+{	
+	local mS3F28_Reply;
+	logn(">>>>>  S3F27_ChangeToAutoMode_LP2  <<<<<");
+	mS3F28_Reply = S3F27_Request(S2_U1(1), S2_L(S2_U1(2)));
+	S3F28_Parser(mS3F28_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S5F3 to the tool to Enable All Alarms
+//////////////////////////////////////////////////////////////
+public S5_F3_EnableAllAlarms()
+{	
+	local mS5F4_Reply;
+	logn(">>>>>  S5F3_EnableAllAlarms  <<<<<");
+	mS5F4_Reply = S5F3_Request(S2_B(0), S2_U4());
+	S5F4_Parser(mS5F4_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S5F3 to the tool to Disable All Alarms
+//////////////////////////////////////////////////////////////
+public S5_F3_DisableAllAlarms()
+{	
+	local mS5F4_Reply;
+	logn(">>>>>  S5F3_DisableAllAlarms  <<<<<");
+	mS5F4_Reply = S5F3_Request(S2_B(1), S2_U4());
+	S5F4_Parser(mS5F4_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S5F3 to the tool to Enable an Alarm
+//////////////////////////////////////////////////////////////
+public S5_F3_EnableSingleAlarm()
+{	
+	local mALID, mText, mStatus, mS5F4_Reply;
+	logn(">>>>>  S5F3_EnableAlarm  <<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct ALID ?\n";
+	do{
+		mALID = GuiGetString("You're requesting to Enable an Alarm\nPlease enter correct ALID");
+		mStatus = GuiMsgBox ("Enable an Alarm on Tool", CatString(mText, mALID), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){		
+		mS5F4_Reply = S5F3_Request(S2_B(0), S2_U4(AtoI(mALID)));
+		S5F4_Parser(mS5F4_Reply);
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S5F3 to the tool to disable an Alarm
+//////////////////////////////////////////////////////////////
+public S5_F3_DisableSingleAlarm()
+{	
+	local mALID, mText, mStatus, mS5F4_Reply;
+	logn(">>>>>> S5F3_DisableAlarm <<<<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct ALID ?\n";
+	do{
+		mALID = GuiGetString("You're requesting to Disable an Alarm\nPlease enter correct ALID");
+		mStatus = GuiMsgBox ("Disable an Alarm on Tool", CatString(mText, mALID), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){		
+		mS5F4_Reply = S5F3_Request(S2_B(1), S2_U4(AtoI(mALID)));
+		S5F4_Parser(mS5F4_Reply);
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S6F15 to the tool to request Event Report
+//////////////////////////////////////////////////////////////
+public S6_F15_RequestEventsReport(){
+	local mCeId, mText, mStatus, mS6F16_Reply;
+	logn(">>>>>> S6F15_RequestEventsReport <<<<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct CEID ?\n";
+	do{
+		mCeId = GuiGetString("You're requesting an Event Report\nPlease enter correct CEID");
+		mStatus = GuiMsgBox ("Request Events Report", CatString(mText, mCeId), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){
+		mS6F16_Reply = S6F15_Request(AtoI(mCeId));
+		S6F16_Parser(mS6F16_Reply);
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S6F23 to the tool to request Purge Spooled Data
+//////////////////////////////////////////////////////////////
+public S6_F23_PurgeSpooledData()
+{	
+	local mS6F24_Reply;
+	logn(">>>>>  S6F23_PurgeSpooledData  <<<<<");
+	mS6F24_Reply = S6F23_Request(1);
+	S6F24_Parser(mS6F24_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S7F3 to Send Process Program to the Tool
+//////////////////////////////////////////////////////////////
+public S7_F3_DownloadProcessProgramToTool(RecipeName)
+{	
+	local mS7F4_Reply, mReplyInfo, mRecipeName, mGuiStrct, mFullPathFile, mText;
+	logn(">>>>>  S7F3_DownloadProcessProgramToTool  <<<<<");
+	if(!RecipeName){
+		mGuiStrct = NewStructured (GuiGFNB);
+		mGuiStrct.WinTitle = "Select the Recipe to Download to the Tool";
+		mStatus = GuiGetFileName (mGuiStrct);
+		
+		if (mStatus == 0){
+			logn("Operation cancelled per user's request");	
+			return;
+		}else{
+			mRecipeName = mGuiStrct.FileTitle;
+			mFullPathFile = _AddLeaf(mGuiStrct.FilePath, mRecipeName);
+		}
+	}else{
+		mRecipeName = RecipeName;
+		mFullPathFile = _AddLeaf(".\\", mRecipeName);
+	}
+	
+	logn("mFullPathFile: ", mFullPathFile);
+	mText = FileRead(mFullPathFile);
+	mText = CheckSECSFormat(mText); //way to convert it back to secs object	
+	mS7F4_Reply = S7F3_Request(mText);
+	S7F4_Parser(mS7F4_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S7F5 to request Process Program uploaded by Tool
+//////////////////////////////////////////////////////////////
+public S7_F5_UploadProcessProgramToHost(RecipeName)
+{	
+	local mS7F6_Reply, mReplyInfo, mRecipeName, mGuiStrct, mLeaf, mFullPathFile, mExt, mRecNameNoExt;
+	logn(">>>>>  S7F5_UploadProcessProgramToHost  <<<<<");
+	if(!RecipeName){
+		mGuiStrct = NewStructured (GuiGFNB);
+		mGuiStrct.WinTitle = "Select the Recipe to Upload to the Host";
+		mStatus = GuiGetFileName (mGuiStrct);
+		
+		if (mStatus == 0){
+			logn("Operation cancelled per user's request");	
+			return;
+		}else{
+			mLeaf = _GetLeaf(mGuiStrct.FilePath);
+			logn("mLeaf: ", mLeaf);
+			mRecNameNoExt = RemoveFileExtenstion(mGuiStrct.FileTitle);
+			if(mLeaf == "PJRecipe"){
+				mRecipeName = mRecNameNoExt;
+				mExt = ".pjr";
+			}else{
+				mRecipeName = CatString(mLeaf, "|", mRecNameNoExt);
+				if(FindString(mLeaf, "1")){
+					mExt = ".r1r";
+				}else if(FindString(mLeaf, "2")){
+					mExt = ".r2r";
+				}else if(FindString(mLeaf, "3")){
+					mExt = ".r3r";
+				}else if(FindString(mLeaf, "4")){
+					mExt = ".r4r";
+				}
+			}
+			
+			mFullPathFile = _AddLeaf(mGuiStrct.FilePath, CatString(mRecNameNoExt, mExt));
+		}
+	}else{
+		mRecipeName = RecipeName;
+		mFullPathFile = _AddLeaf(".\\", mRecipeName);
+	}
+	mS7F6_Reply = S7F5_Request(mRecipeName);
+	S7F6_Parser(mS7F6_Reply);
+
+	if(IsEmptyList(Decode(mS7F6_Reply.text)))
+		logn("Empty Response. Check Recipe on the Tool");	
+	else if (IsEmptyList(filewrite(mFullPathFile, mS7F6_Reply.text)))
+		logn("Thinh - Operation was failed!");
+	else
+		logn("Uploaded Recipe: ", mFullPathFile);	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S7F17 to request Tool to delete Recipe
+//////////////////////////////////////////////////////////////
+public S7_F17_DeleteRecipeRequest(RecipeName)
+{	
+	local mS7F6_Reply, mReplyInfo, mRecipeName, mGuiStrct, mLeaf, mFullPathFile, mExt;
+	logn(">>>>>  S7F17_DeleteRecipeRequest  <<<<<");
+	if(!RecipeName){
+		mGuiStrct = NewStructured (GuiGFNB);
+		mGuiStrct.WinTitle = "Select the Recipe to Delete in the Tool";
+		mStatus = GuiGetFileName (mGuiStrct);
+		
+		if (mStatus == 0){
+			logn("Operation cancelled per user's request");	
+			return;
+		}else{
+			mLeaf = _GetLeaf(mGuiStrct.FilePath);
+			logn("mLeaf: ", mLeaf);
+
+			if(mLeaf == "PJRecipe"){
+				mRecipeName = RemoveFileExtenstion(mGuiStrct.FileTitle);
+			}else{
+				mRecipeName = CatString(mLeaf, "|", RemoveFileExtenstion(mGuiStrct.FileTitle));
+			}			
+		}
+	}
+	
+	//logn("mRecipeName: ", mRecipeName);
+	mS7F18_Reply = S7F17_Request(S2_A(mRecipeName));
+	S7F18_Parser(mS7F18_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S7F19 to request Current Process Program Info
+//////////////////////////////////////////////////////////////
+public S7_F19_GetCurrentProcessPrograms()
+{	
+	local i, mS7F20_Reply, mReplyInfo, mRecObj, mFound;
+	logn(">>>>>  S7F19_GetCurrentProcessPrograms  <<<<<");
+	mS7F20_Reply = S7F19_Request();
+	S7F20_Parser(mS7F20_Reply);
+	mReplyInfo = Decode(mS7F20_Reply.text);	
+	RECIPES = NewList();
+	
+	for(i = 0; i < GetCount(mReplyInfo); i = i + 1 ){		
+		logn("Found available recipe: ", Smart_Decode(mReplyInfo[i]));
+		mRecObj = NewStructured(RecObj);
+		mFullPathRecipe = Smart_Decode(mReplyInfo[i]);
+		//logn("mFullPathRecipe Recipe: ", mFullPathRecipe);
+		mRecObj.origfullname = mFullPathRecipe;
+		mFound = FindString(mFullPathRecipe, "|");
+		if(mFound.Count > 0){
+			mRecObj.folder = SubString(mFullPathRecipe, 0, mFound.Start);
+			mRecObj.name = SubString(mFullPathRecipe, mFound.Start + 1);
+		}else{
+			mRecObj.folder = ".\\";
+			mRecObj.name = SubString(mFullPathRecipe, 0);			
+		}	
+		
+		RECIPES = InsertFirst(mRecObj, RECIPES);
+	}		
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Sending S7F23 to Download Formatted Process Program to The Tool
+//////////////////////////////////////////////////////////////////////////
+public S7_F23_DownloadFormattedProcessProgramToTool(RecipeName){
+	local mText, mStatus, mS7F24_Reply, mGuiStrct, mRecipeName, mFullPathFile;
+	local mSendMsg, mReplyMsg; 
+	logn(">>>>>  S7F23_DownloadFormattedProcessProgramToTool  <<<<<");
+	if(!RecipeName){
+		mGuiStrct = NewStructured (GuiGFNB);
+		mGuiStrct.WinTitle = "Select the Recipe to Download to the Tool";
+		mStatus = GuiGetFileName (mGuiStrct);
+		
+		if (mStatus == 0){
+			logn("Operation cancelled per user's request");	
+			return;
+		}else{
+			mRecipeName = mGuiStrct.FileTitle;
+		}
+	}else{
+		mRecipeName = RecipeName;
+	}	
+	
+	logn("FilePath: ", mGuiStrct.FilePath);	
+	mFullPathFile = _AddLeaf(mGuiStrct.FilePath, mRecipeName);
+	logn("mFullPathFile: ", mFullPathFile);
+	mText = FileRead(mFullPathFile);
+	mText = CheckSECSFormat(mText); //way to convert it back to secs object
+	mS7F24_Reply = S7F23_Request(mText);
+	S7F24_Parser(mS7F24_Reply);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Sending S7F25 to request Formatted Process Program Uploaded to The Host
+//////////////////////////////////////////////////////////////////////////
+public S7_F25_UploadFormattedProcessProgramToHost(RecipeName)
+{	
+	local mStatus, mS7F26_Reply, mGuiStrct, mRecipeName, mFullPathFile, mLeaf, mExt, mRecNameOnly;
+	logn(">>>>>  S7F25_UploadFormattedProcessProgramToHost  <<<<<");
+	if(!RecipeName){
+		mGuiStrct = NewStructured (GuiGFNB);
+		mGuiStrct.WinTitle = "Select the Recipe to Upload to the Host";
+		mStatus = GuiGetFileName (mGuiStrct);
+		
+		if (mStatus == 0){
+			logn("Operation cancelled per user's request");	
+			return;
+		}else{
+			mLeaf = _GetLeaf(mGuiStrct.FilePath);
+			logn("mLeaf: ", mLeaf);
+			mRecNameNoExt = RemoveFileExtenstion(mGuiStrct.FileTitle);
+			if(mLeaf == "PJRecipe"){
+				mRecipeName = mRecNameNoExt;
+				mExt = ".pjr";
+			}else{
+				mRecipeName = CatString(mLeaf, "|", mRecNameNoExt);
+				
+				if(mLeaf == "SEQ"){
+					mExt = ".pjr";
+				}else if(FindString(mLeaf, "1")){
+					mExt = ".r1t";
+				}else if(FindString(mLeaf, "2")){
+					mExt = ".r2t";
+				}else if(FindString(mLeaf, "3")){
+					mExt = ".r3t";
+				}else if(FindString(mLeaf, "4")){
+					mExt = ".r4t";
+				}			
+			}
+			
+			mFullPathFile = _AddLeaf(mGuiStrct.FilePath, CatString(mRecNameNoExt, mExt));
+		}
+	}else{
+		mRecipeName = RecipeName;
+		mExt = ".pjr";
+		mFullPathFile = _AddLeaf(".\\", CatString(mRecipeName, mExt));	
+	}
+	
+	mS7F26_Reply = S7F25_Request(mRecipeName);
+	S7F26_Parser(mS7F26_Reply);
+	
+	if(IsEmptyList(Decode(mS7F26_Reply.text)))
+		logn("Empty Response. Check Recipe on the Tool");
+	else if (IsEmptyList(filewrite(mFullPathFile, mS7F26_Reply.text)))
+		logn("Thinh - Operation was failed!");
+	else
+		logn("Uploaded Recipe: ", mFullPathFile);		
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S7F71 to request Current Process Recipe List
+//////////////////////////////////////////////////////////////
+public S7_F71_GetCurrentProcessRecipeList()
+{	
+	local i, ii, mS7F72_Reply, mReplyInfo, mRCRecipeInfo, mRecipes, mAllRecipes;
+	logn(">>>>>  S7F71_GetCurrentProcessRecipeList  <<<<<");
+	mS7F72_Reply = S7F71_Request();
+	S7F72_Parser(mS7F72_Reply);
+	mReplyInfo = Decode(mS7F72_Reply.text);	
+	
+	for(i = 0; i < GetCount(mReplyInfo); i = i + 1 ){		
+		mRCRecipeInfo = Decode(mReplyInfo[i]);
+		mRC = S2_Decode(mRCRecipeInfo[0]);
+		logn("RC: ", mRC);
+		mRCRecipeList = Decode(mRCRecipeInfo[1]);
+		for(ii = 0; ii < GetCount(mRCRecipeList); ii = ii + 1 ){
+			mRCRecipe = Smart_Decode(mRCRecipeList[ii]);
+			logn(" mRCRecipe: ", mRCRecipe);
+			mRecipes = InsertFirst(mRCRecipe, mRecipes);
+		}
+		mAllRecipes = InsertFirst(Reverse(mRecipes), mAllRecipes);
+	}
+	return(Reverse(mAllRecipes));
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S14F1 Get 'CarrierIDStatus' Attributes For Carrier
+//////////////////////////////////////////////////////////////
+public S14_F1_CarrierIDStatus()
+{	
+	local mCarrierId, mText, mStatus, mS14F2_Reply;
+	logn(">>>>>  S14_F1_CarrierIDStatus  <<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct CarrierId ?\n";
+	do{
+		mCarrierId = GuiGetString("You're requesting to get CarrierIDStatus\nPlease enter correct CarrierId");
+		mStatus = GuiMsgBox ("CarrierIDStatus", CatString(mText, mCarrierId), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){		
+		mS14F2_Reply = S14F1_Request(S2_A(""), S2_A("Carrier"), S2_L(S2_A(mCarrierId)), S2_L(), S2_L(S2_A("CarrierIDStatus")));
+		S14F2_Parser(mS14F2_Reply);
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S14F1 Get 'CarrierAccessingStatus' Attributes For Carrier
+//////////////////////////////////////////////////////////////
+public S14_F1_CarrierAccessingStatus()
+{	
+	local mCarrierId, mText, mStatus, mS14F2_Reply;
+	logn(">>>>>  S14_F1_CarrierAccessingStatus  <<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct CarrierId ?\n";
+	do{
+		mCarrierId = GuiGetString("You're requesting to get CarrierAccessingStatus. Please enter correct CarrierId");
+		mStatus = GuiMsgBox ("CarrierAccessingStatus", CatString(mText, mCarrierId), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){		
+		mS14F2_Reply = S14F1_Request(S2_A(""), S2_A("Carrier"), S2_L(S2_A(mCarrierId)), S2_L(), S2_L(S2_A("CarrierAccessingStatus")));
+		S14F2_Parser(mS14F2_Reply);
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S14F1 Get 'SlotMapStatus' Attributes For Carrier
+//////////////////////////////////////////////////////////////
+public S14_F1_CarrierSlotMapStatus()
+{	
+	local mCarrierId, mText, mStatus, mS14F2_Reply;
+	logn(">>>>>  S14F1_CarrierSlotMapStatus  <<<<<");
+	mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct CarrierId ?\n";
+	do{
+		mCarrierId = GuiGetString("You're requesting to get Carrier's SlotMapStatus\nPlease enter correct CarrierId");
+		mStatus = GuiMsgBox ("Carrier's SlotMapStatus", CatString(mText, mCarrierId), 3);
+	}while (mStatus == 7);
+	
+	if(mStatus == 6){		
+		mS14F2_Reply = S14F1_Request(S2_A(""), S2_A("Carrier"), S2_L(S2_A(mCarrierId)), S2_L(), S2_L(S2_A("SlotMapStatus")));
+		S14F2_Parser(mS14F2_Reply);
+	}else{
+		logn("Terminated per user's request");
+	}	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S14F1 Get 'CarrierIDStatus' Attributes For Carrier
+//////////////////////////////////////////////////////////////
+// public S14_F1_CarrierSlotMapStatus()
+// {	
+	// local mCarrierId, mText, mStatus, mS14F2_Reply;
+	// logn(">>>>>> S14F1_CarrierSlotMapStatus <<<<<<<");
+	// mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered correct CarrierId ?\n";
+	// do{
+		// mCarrierId = GuiGetString("You're requesting to get Carrier's CarrierIDStatus\nPlease enter correct CarrierId");
+		// mStatus = GuiMsgBox ("Carrier's CarrierIDStatus", CatString(mText, mCarrierId), 3);
+	// }while (mStatus == 7);
+	
+	// if(mStatus == 6){		
+		// mS14F2_Reply = S14F1_Request(
+									// S2_A(""), 
+									// S2_A("Carrier"), 
+									// S2_L(
+										// S2_A(mCarrierId)
+										// ), 
+									// S2_L(), 
+									// S2_L(
+										// S2_A("CarrierIDStatus")
+										// )
+									// );
+		// S14F2_Parser(mS14F2_Reply);
+	// }else{
+		// logn("Terminated per user's request");
+	// }	
+// }
+
+//////////////////////////////////////////////////////////////
+// Sending S14F9 Create Object (~Create CJ Obj) Request
+//////////////////////////////////////////////////////////////
+public S14_F9_CreateCJobObjectRequest(IntroObject)
+{	
+	local mS14F10_Reply, mPJID, mCID;
+	logn(">>>>>  S14F9_CreateCJobObjectRequest  <<<<<");	
+	CJID = CatString("ASM-HostCJ-", ToAscii(AtoI(GetDateTime())));
+	//CJID = "CJ-Stp-1111111111111111111111111111111111111111111111111111111111111111111111111";
+	if(!IntroObject)
+		IntroObject = INTRO[0];
+	
+	mCID  = IntroObject.carrierid;
+	mPJID = IntroObject.pjid;
+	IntroObject.cjid = CJID;
+	
+	mS14F10_Reply = S14F9_Request(
+									S2_A("ControlJob"),
+									S2_A("ControlJob"),
+									S2_L(
+										S2_L(
+											S2_A("ObjID"),
+											S2_A(CJID) //ControlJobID
+											),
+										S2_L(
+											S2_A("ProcessOrderMgmt"),
+											S2_U1(3) //3 = List, 2 = Optimize, 1 = Arrival
+											),
+										S2_L(
+											S2_A("StartMethod"),
+											S2_BOOLEAN(1)
+											),
+										S2_L(
+											S2_A("CarrierInputSpec"),
+											S2_L(
+												S2_A(mCID) //CarrierId
+												)
+											),
+										S2_L(
+											S2_A("MtrlOutSpec"),
+											S2_L()
+											),
+										S2_L(
+											S2_A("ProcessingCtrlSpec"),
+											S2_L(
+												S2_L(
+													S2_A(mPJID), //PJID
+													S2_L(),
+													S2_L()
+													)
+												)
+											
+											)
+										)
+									);
+	S14F10_Parser(mS14F10_Reply);
+}
+
+public S16_F5_StartProcessJobRequest() {S16_F5_PRJobCommandRequest("", "", "Start", "");}
+public S16_F5_AbortProcessJobRequest() {S16_F5_PRJobCommandRequest("", "", "Abort", "");}
+public S16_F5_CancelProcessJobRequest() {S16_F5_PRJobCommandRequest("", "", "Cancel", "");}
+public S16_F5_StopProcessJobRequest() {S16_F5_PRJobCommandRequest("", "", "Stop", "");}
+ 
+//////////////////////////////////////////////////////////////
+// Sending S16F5 Process Job Command Request to the Tool
+//////////////////////////////////////////////////////////////
+S16_F5_PRJobCommandRequest(DataId, PJID, PjCmdName, PjCmdInfo){	
+	local mPJID, mPJCmd, mS16F6_Reply;
+	logn(">>>>>  S16F5_PRJobCommandRequest  <<<<<");	
+	mPJID = PJID;
+	mPJCmd = PjCmdName;
+	
+	if(!PJID){
+		mPJID = GuiGetString("You're requesting to sent to the tool PJCmd:", mPJCmd , " - Please enter PJID");	
+	}	
+	
+	mS16F6_Reply = S16F5_Request(
+									S2_U4(0), //DataId
+									S2_A(mPJID), //PJID
+									S2_A(mPJCmd), //PJ Cmd Name
+									S2_L()
+								);
+	S16F6_Parser(mS16F6_Reply);
+}
+
+UpdateDefaultFirstIntro(pjCmd, IntroObject){
+	local mSlotAndRecipe;
+	mSlotAndRecipe 		= PromptForSlotAndRecipeSelection();
+	IntroObject.quantity = mSlotAndRecipe[0];
+	IntroObject.recipe 	= mSlotAndRecipe[1];
+	IntroObject.pjCmd 	= pjCmd;
+	IntroObject.portid 	= PID;
+	return(IntroObject);
+}
+
+CreatePJSecsList(CarrierID, Slots, Recipe){
+	local pjSecsList;
+	PJID = CatString("ASM-HostPJ-", ToAscii(AtoI(GetDateTime()))); //Create unique PJID	
+	pjSecsList = S2_L(
+						S2_A(PJID), //PJID
+						S2_B(0x0D),
+						S2_L( S2_L(S2_A(CarrierID), S2_L(Reverse(Slots)))),
+						S2_L(
+							S2_U1(1), //Method 1 = Recipe Wo Parameter Tuning and 2 = with Para Tuning
+							S2_A(Recipe), //RecipeName
+							S2_L()
+							),
+						S2_BOOLEAN(1), //1 = Auto Start and 0 = Manual Start
+						S2_L()
+					);
+
+	return(pjSecsList);
+}
+
+SendProcessJob(pjCmd, IntroObject){
+	local i, mS16F12_Reply, mS16F16_Reply, mSlots, mNumber, mIntroOBJ, mCarrierID, mQuantity, mPJSecsList;
+	PJID = CatString("ASM-HostPJ-", ToAscii(AtoI(GetDateTime()))); //Create unique PJID	
+	
+	if(!IntroObject)
+		IntroObject	= UpdateDefaultFirstIntro(pjCmd, INTRO[0]);
+	
+	IntroObject.pjid 	= PJID;	
+	mRecipe 			= IntroObject.recipe;
+	mQuantity 			= IntroObject.quantity;
+	mCarrierID 			= IntroObject.carrierid;
+	
+	for (i = 0; i < mQuantity; i = i + 1){
+		mSlots = InsertFirst(S2_U1(i+1), mSlots);
+	}		
+	
+	if(pjCmd == "S16F11"){ //Single Job Only
+		mS16F12_Reply = S16F11_Request(
+										S2_U4(0),
+										S2_A(PJID), //ProcessJobID
+										S2_B(0x0D),									
+										S2_L( S2_L(S2_A(mCarrierID), S2_L(Reverse(mSlots)))),										
+										S2_L(
+											S2_U1(2), //Method 1 = Recipe Wo Parameter Tuning and 2 = with Para Tuning
+											S2_A(mRecipe), //RecipeName
+											S2_L(
+												S2_L(
+													S2_A("UseReactor"), 
+													S2_U1(1)
+													)
+												)
+											),
+										S2_BOOLEAN(0), //1 = Auto Start and 0 = Manual Start
+										S2_L()
+										);
+		S16F12_Parser(mS16F12_Reply);											
+	}else if(pjCmd == "S16F15"){ //Single or Multi Jobs 
+		if (NUMJOB > 1){
+			mMultiPortion = Split(mSlots, NUMJOB);
+			for (i = 0; i < GetCount(mMultiPortion); i = i + 1){
+				mSlots = mMultiPortion[i];
+				mPJSecsList = CreatePJSecsList(mCarrierID, mSlots, mRecipe);
+				mMultiPJs = InsertFirst(mPJSecsList, mMultiPJs);
+				wait( NewTimer( 1 ) );	//sleep for 1 sec to make different PJID
+			}
+			mS16F16_Reply = S16F15_Request(
+											S2_U4(0),
+											S2_L(mMultiPJs)											
+										);			
+		}else{
+			mS16F16_Reply = S16F15_Request(
+											S2_U4(0),
+											S2_L(
+												S2_L(
+													S2_A(PJID), //PJID
+													S2_B(0x0D),
+													S2_L( S2_L(S2_A(mCarrierID), S2_L(Reverse(mSlots)))),
+													S2_L(
+														S2_U1(2), //Method 1 = Recipe Wo Parameter Tuning and 2 = with Para Tuning
+														S2_A(mRecipe), //RecipeName
+														S2_L(S2_L(S2_A("PRRecipeCycle"), S2_U1(1)))
+														),
+													S2_BOOLEAN(1), //1 = Auto Start and 0 = Manual Start
+													S2_L()
+													)
+												)
+											);			
+		}
+		
+		S16F16_Parser(mS16F16_Reply);		
+	}	
+}
+
+Split(WholeList, NumSplit){
+	local mQuantity, mMultiPortion;
+	mQuantity = GetCount(WholeList) / NumSplit;
+	do{
+		mPorttion = NewList();
+		for (i = 0; i < mQuantity; i = i + 1){
+			mPorttion = InsertFirst(GetFirst(WholeList), mPorttion);
+			WholeList = RemoveFirst(WholeList);
+		}
+		mMultiPortion = InsertFirst(mPorttion, mMultiPortion);
+	}while(WholeList);
+	
+	return(mMultiPortion);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S16F11 PRJobCreateEnh Request
+//////////////////////////////////////////////////////////////
+public S16_F11_PRJobCreateEnhRequest(IntroObject)
+{	
+	logn(">>>>>  S16F11_PRJobCreateEnhRequest  <<<<<");	
+	SendProcessJob("S16F11", IntroObject);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S16F15 Process Job Multi Create Request
+//////////////////////////////////////////////////////////////
+public S16_F15_ProcessJobMultiCreateRequest(IntroObject)
+{	
+	logn(">>>>>  S16F15_ProcessJobMultiCreateRequest  <<<<<");	
+	SendProcessJob("S16F15", IntroObject);	
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S16F19 Process Job List Request
+//////////////////////////////////////////////////////////////
+public S16_F19_ProcessJobListRequest()
+{	
+	local mS16F20_Reply;
+	logn(">>>>>  S16F19_ProcessJobListRequest  <<<<<");
+	mS16F20_Reply = S16F19_Request();
+	S16F20_Parser(mS16F20_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S16F21 Process Job Create Limit Request
+//////////////////////////////////////////////////////////////
+public S16_F21_ProcessJobCreateLimitRequest()
+{	
+	local mS16F22_Reply;
+	logn(">>>>>  S16F21_ProcessJobCreateLimitRequest  <<<<<");
+	mS16F22_Reply = S16F21_Request();
+	S16F22_Parser(mS16F22_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S16F27 Sends CJStop Command to the Tool
+//////////////////////////////////////////////////////////////
+public S16_F27_SendCJStopCommand(CJID)
+{	
+	local mS16F28_Reply, mCJID;
+	logn(">>>>>  S16F27_SendCJStopCommand  <<<<<");
+	if (CJID)
+		mCJID = CJID;
+	else
+		mCJID = GuiGetString("You want to STOP Control Job. Please enter CJID");	
+	//mCJID = "CJ-Stp-1111111111111111111111111111111111111111111111111111111111111111111111111";
+	mS16F28_Reply = S16F27_Request(S2_A(mCJID), S2_U1(6), S2_L(S2_A("Action"), S2_U1(1)));
+	S16F28_Parser(mS16F28_Reply);
+}
+
+//////////////////////////////////////////////////////////////
+// Sending S16F27 Sends CJStart Command to the Tool
+//////////////////////////////////////////////////////////////
+public S16_F27_SendCJStartCommand()
+{	
+	local mS16F28_Reply, mCJID;
+	logn(">>>>>  S16F27_SendCJStartCommand  <<<<<");	
+	mCJID = GuiGetString("You want to START Control Job. Please enter CJID");	
+	mS16F28_Reply = S16F27_Request(S2_A(mCJID), S2_U1(1), S2_L(S2_A("Action"), S2_U1(0)));
+	S16F28_Parser(mS16F28_Reply);
+}
+
+VerifyPortTransferState(PortID){
+	local mValues, mS1F4_Reply;
+	logn(">>>>>  VerifyPortTransferState  <<<<<");
+	mS1F4_Reply = S1F3_Request(S2_U4(33947729 + PortID));
+	mValues = S1F4_Parser(mS1F4_Reply);
+	return(mValues[0]);
+}
+	
+ConvertStringToList(InString, Seperator){
+	local mFound, mStartLocation, mItem, mList;
+	mStartLocation = 0;
+	mFound = FindString(InString, Seperator, 0);
+    do{
+		mItem = "";
+        mFound = FindString(InString, Seperator, mStartLocation);
+		if (mFound.Count == 1){
+			mItem = SubString(InString, mStartLocation, mFound.Start - mStartLocation);
+		}else{
+			mItem = SubString(InString, mStartLocation);
+		}		
+		if(mItem != ""){
+			mList = InsertFirst(mItem, mList);
+		}
+		
+		mStartLocation = mFound.Start + mFound.Count;
+        wait();
+    } while (mFound.Start != 0 || mFound.Count != 0);
+
+	return (Reverse(mList));
+}
+
+//STRUCTURE IntroOBJ (lotid, carrierid, portid, recipe, introtype, quantity, pjid, cjid, State, inprocess, first, PWC, CJStart, pjCmd);
+RunLotAtLP(PortID, PjCmd, IsSingleJob){
+	local S1F4_Reply, mStatus, mSlotAndRecipe;
+	if(CTRLREMOTE == 0){
+		logn("*****************************************************");
+		logn("********* Please set Control ONLINE REMOTE **********");
+		logn("*****************************************************");		
+		return;
+	}else if(!RC1_READY && !RC2_READY && !RC3_READY && RC4_READY){
+		logn("*****************************************************");
+		logn("********* Tool is not ready for lot intro ***********");
+		logn("*****************************************************");		
+		return;		
+	}
+	
+	logn(">>>>>  RunLotAtLP", PortID, " with ", PjCmd, "  <<<<<");
+	S1F4_Reply = S1F3_Request(S2_U4(33947728 + PortID)); //Port1AssociationState
+	mStatus = S1F4_Parser(S1F4_Reply);		
+	
+	mSlotAndRecipe = PromptForSlotAndRecipeSelection();
+	INTRO[PortID-1].quantity 	= mSlotAndRecipe[0];
+	INTRO[PortID-1].recipe 		= mSlotAndRecipe[1];
+	INTRO[PortID-1].State 		= "INTRO";
+	INTRO[PortID-1].portid 		= PortID;
+	INTRO[PortID-1].carrierid	= ToAscii(PortID); //Default using CarrierID similar as PortID
+	INTRO[PortID-1].pjCmd 		= PjCmd;
+	
+	if(mStatus[0] == 1){ //There's a lot sitting at the load port	
+		S3_F17_CarrierActionRequest("CancelCarrier", ToAscii(PortID), PortID);
+		S2_F49_LPUnLoadRequest_LP(PortID);		
+		wait( NewTimer( 2 ) );	//sleep for 2 secs		
+	}else{
+		S2_F49_LPLoadRequest_LP(PortID);
+	}	
+}
+
+public _RunLotAtLP1ByS16F11(){RunLotAtLP(1, "S16F11");}
+public _RunLotAtLP2ByS16F11(){RunLotAtLP(2, "S16F11");}
+public _RunLotAtLP1ByS16F15(){RunLotAtLP(1, "S16F15");}
+public _RunLotAtLP1ByS16F15withSingleJob(){RunLotAtLP(1, "S16F15");}
+public _RunLotAtLP1ByS16F15withMultiJobs(){NUMJOB = 2; RunLotAtLP(1, "S16F15");}
+public _RunLotAtLP2ByS16F15(){RunLotAtLP(2, "S16F15");}
+
+CreateDirIfNotExist(Directory){
+	if (!IsDirectoryStructure (FindFile (Directory, "", FF_SHOWALL))){		
+		if (IsEmptyList(CreateDirectory(Directory)))
+			logn("Thinh - failed to create dir: ", Directory);
+		else
+			logn("Created dir: ", Directory);
+	}
+	return(Directory);
+}
+
+CreateRecipeIfNotExist(recipeObject){
+	if (!IsFileStructure(FindFile(recipeObject.hostfullname, "", FF_NORMAL))){		
+		if (IsEmptyList(filewrite(recipeObject.hostfullname, recipeObject.origfullname)))
+			logn("Thinh - failed to create recipe: ", recipeObject.hostfullname);
+		else
+			logn("Created Recipe: ", recipeObject.hostfullname);
+	}
+}
+
+public UpdateRecipeDirectories()
+{
+	local i, mRecipeFolder, mCurrentDir, mHostRecipe;
+    logn("Thinh -> UpdateRecipeDirectories()");	
+	
+	if(IsEmptyList(RECIPES)){
+		S7_F19_GetCurrentProcessPrograms();
+	}
+	
+	for(i = 0; i < GetCount(RECIPES); i = i + 1)
+	{
+		mRecipeFolder = RECIPES[i].folder;
+		//logn("mRecipeFolder: ", mRecipeFolder);
+		if ( mRecipeFolder == "SEQ" || mRecipeFolder == ".\\"){
+			mCurrentDir = CreateDirIfNotExist(".\\PJRecipe");
+			if (mRecipeFolder == "SEQ")
+				mCurrentDir = CreateDirIfNotExist(_AddLeaf(mCurrentDir, "SEQ"));
+			
+		}else{
+			mCurrentDir = CreateDirIfNotExist(".\\ProcessRecipe");
+			mCurrentDir = CreateDirIfNotExist(_AddLeaf(mCurrentDir, mRecipeFolder));
+		}
+		RECIPES[i].hostfullname = _AddLeaf(mCurrentDir, RECIPES[i].name);
+		CreateRecipeIfNotExist(RECIPES[i]);
+	}			
+}
+
+public UpdateProcessRecipeDir(Recipes)
+{
+	local i, ii, mRecipeDir, mRecDirStrObj, mStatus, mFullPathFile, mRCRecipes;
+
+    logn("Thinh -> UpdateProcessRecipeDir()");	
+	
+	if(IsEmptyList(Recipes)){
+		Recipes = S7_F71_GetCurrentProcessRecipeList();
+	}
+	
+	mRecipeDir =  "ProcessRecipes";
+	mRecDirStrObj = FindFile (mRecipeDir, "*", FF_SHOWALL);
+
+	if (IsDirectoryStructure ( mRecDirStrObj))
+	{
+		mStatus = RemoveDirectory(mRecipeDir);	
+		if (IsEmptyList(mStatus))
+			logn("Thinh - failed to delete dir: ", mRecipeDir);
+	}
+
+	mStatus = CreateDirectory(mRecipeDir);	
+	if (IsEmptyList(mStatus))
+		logn("Thinh - failed to create dir: ", mRecipeDir);
+	
+	for(i = 0; i < GetCount(Recipes); i = i + 1){
+		mRecipeDir = CatString("RC", ToAscii(i+1));
+		mStatus = CreateDirectory(mRecipeDir);	
+		if (IsEmptyList(mStatus))
+			logn("Thinh - failed to create dir: ", mRecipeDir);
+		
+		mRCRecipes = Recipes[i];
+		for(ii = 0; ii < GetCount(mRCRecipes); ii = ii + 1){
+			mFullPathFile = CatString(".\\", mRecipeDir, "\\", mRCRecipes[ii]);			
+			mStatus = filewrite(mFullPathFile, mRCRecipes[ii]);		
+			if (IsEmptyList(mStatus))
+				logn("Thinh - failed to create recipe: ", mRCRecipes[ii]);				
+		}
+	}	
+}
+
+RemoveFileExtenstion(FileName){
+	local mFileWithNoExtension, mFound;
+	mFound = FindString(FileName, ".", 0);
+	if(mFound.Count > 0){
+		mFileWithNoExtension = SubString(FileName, 0, mFound.Start);
+		return(mFileWithNoExtension);
+	}else
+		return(FileName);
+}
+
+PromptForSlotAndRecipeSelection(){
+	local mSlot, mGuiStrct, mStatus;
+	mSlot = GuiGetInteger("Enter 1 to 25 for number of wafer you want to process and then select PJ Recipe");
+	if(NUMJOB > 1){
+		NUMJOB = GuiGetInteger("How many Jobs?");
+	}
+	
+	mGuiStrct = NewStructured (GuiGFNB);
+	mGuiStrct.WinTitle = "Select PJ Recipe to Process";
+	mStatus = GuiGetFileName (mGuiStrct);
+	
+	if (mStatus == 0){
+		logn("Operation cancelled per user's request");	
+		return;
+	}
+	
+	return(NewList(mSlot, RemoveFileExtenstion(mGuiStrct.FileTitle)));
+}
+
+public _TEST(){
+	local i, a, b, c, simmsg, mLines, mLogTime, mPJID, mGuiStrct;
+	local test, mSlots, mStatus;
+				
+	mStatus = CreateDirectory(".\\ProcessRecipe\\MC1");	
+	logn("Created dir: ", mStatus);
+	
+	if (IsEmptyList(mStatus))
+		logn("Thinh - failed to create dir: ");
+	
+	logn("CurrentDir: ", _GetLeaf( ".\\" )); 
+	for (i = 0; i < 6; i = i + 1){
+		mSlots = InsertFirst(S2_U1(i+1), mSlots);
+	}	
+	
+	test = Split(mSlots, 2);
+	logn("test: ", GetCount(test));
+	logn(test);
+	
+	// mGuiStrct = NewStructured (GuiGFNB);
+	// mGuiStrct.WinTitle = "Select PJ Recipe to Process";
+	// mGuiStrct.FilePath = ".\\PJ-Recipes";
+	// Status = GuiGetFileName (mGuiStrct);
+	// test = FileRead(mGuiStrct.FileName);
+	// logn("FileName: ", test);
+	
+	// test = GetLogTime();
+	// logn("test: ", test);
+	// test = AtoI(test);
+	// logn("test: ", test);
+	
+	// i = -670;
+	// a = ToAscii(i);
+
+	// logn(i, " Vs. ", ToAscii(i));
+	// logn("first char: ", a[0]);
+	
+	// if(a[0] == "-"){
+		// logn("Yes - ");
+		// logn("Sub: ", SubString(a, 1));
+	// }
+     logn ("Performing special work now...");
+// mLines = GetLines("C:\\ASM-Host\\TestData\\Data.txt");
+// logn (mLines);
+	 simmsg = NewMessage ();
+	 simmsg.text = (<L[3/1]
+    <U1[1/1] 1>
+    <U1[1/1] 1>
+    <U1[1/1] 1>
+>);
+		// simmsg.text = (<L 
+  // <U4 1>
+  // <A "201804172102-M8A3J.04-01">
+  // <B 0x0D>
+  // <L 
+    // <L 
+      // <A "A353">
+      // <L 
+        // <U1 1>
+        // <U1 2>
+      // >
+    // >
+  // >
+  // <L 
+    // <U1 2>
+    // <A "P-HFO20CYLPP-M8A3J04">
+    // <L 
+      // <L 
+        // <A "UseReactor">
+        // <U1 1>
+      // >
+    // >
+  // >
+  // <BOOLEAN 0x0>
+  // <L >
+// >);
+logn (simmsg.text);
+TestData(simmsg);
+	a = Smart_Decode(simmsg.text);
+	logn("s: ", GetCount(a));
+	b = Decode(a[2]);
+	logn("s: ", GetCount(b));
+	
+     //dump (simmsg);
+
+     //simmsg = NewMessage (Test_Data);
+
+     //edit the parts of message they want to send now
+
+     //logn (simmsg.text);
+	
+}
+
+public _TSMC_EventSubscription(){
+	logn(">>>>>> _TSMC_EventSubscription <<<<<<<");
+	wait(SendPrimary(TSMC1_S2F37));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	wait(SendPrimary(TSMC2_S2F35));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	wait(SendPrimary(TSMC3_S2F33));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	wait(SendPrimary(TSMC4_S2F33));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	wait(SendPrimary(TSMC5_S2F35));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+	wait(SendPrimary(TSMC6_S2F37));
+	wait( NewTimer( 1 ) );	//sleep for 1 sec
+}
