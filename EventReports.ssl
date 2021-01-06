@@ -1,26 +1,23 @@
-/*
-*
-*   File: EventReports.ssl
-*	Version: 1.0        
-*	Date: Feb 10, 2018
+/*/////////////////////////////////////////////
+*   File: EventReports.ssl      
+*	Version: 2.0        
+*	Date: Oct 04, 2018
 *	Scripted by THINH P NGUYEN 
-*
-*/
-
-EventHandler(mS6F11Struct){
+*//////////////////////////////////////////////
+DefaultEventHandler(S6F11Struct){
 	local mCeId, mReport, mReportId, mValues, mData, mVidVal, mResult, mStatus, mMaterialOReport, mPortLocID;
-	local mCarrierIDReport, mCarrierID;
+	local mCarrierIDReport, mCarrierID, mS6F11Struct;
 	
-	logn("Thinh -> EventHandler()" );	
+	logn("Thinh -> DefaultEventHandler()");	
+	mS6F11Struct = S6F11Struct;
 	//TestData(mS6F11Struct);
 	mCeId = mS6F11Struct.CeId;
 	
 	switch(mCeId){
 		case 69648: //EquipmentOFF-LINE
-					logn("*****  GOT EquipmentOFF-LINE  *****");
+					//logn("*****  GOT EquipmentOFF-LINE");
 					mReport 	= Decode(mS6F11Struct.reportList[1]);
 					mReportId 	= S2_Decode(mReport[0]);
-					CTRLREMOTE 	= 0;
 					if(mReportId == 131104){
 						mData 	= Decode(mReport[1])[0];
 						mVidVal = S2_Decode(mData);
@@ -30,11 +27,11 @@ EventHandler(mS6F11Struct){
 						logn("*****************************************************");
 					}
 					break;
+		case 400000015: //Mecca Event					
 		case 69664: //ControlStateLOCAL
-					logn("*****  GOT ControlStateLOCAL *****");
+					//logn("*****  GOT ControlStateLOCAL");					
 					mReport 	= Decode(mS6F11Struct.reportList[1]);
 					mReportId 	= S2_Decode(mReport[0]);
-					CTRLREMOTE	= 0;
 					if(mReportId == 131104){
 						mData 	= Decode(mReport[1])[0];
 						mVidVal = S2_Decode(mData);
@@ -42,13 +39,13 @@ EventHandler(mS6F11Struct){
 						logn("*****************************************************");
 						logn(mStatus);
 						logn("*****************************************************");
-					}
-					break;					
+					}						
+					break;	
+		case 400000016: //Mecca Event
 		case 69680:	//ControlStateREMOTE
-					logn("*****  GOT ControlStateREMOTE  *****");
+					logn("*****  GOT ControlStateREMOTE");
 					mReport 	= Decode(mS6F11Struct.reportList[1]);					
 					mReportId 	= S2_Decode(mReport[0]);
-					CTRLREMOTE	= 1;
 					if(mReportId == 131104){
 						mData 	= Decode(mReport[1])[0];
 						mVidVal = S2_Decode(mData);
@@ -57,162 +54,710 @@ EventHandler(mS6F11Struct){
 						logn(mStatus);
 						logn("*****************************************************");
 					}
-					Initialize_Intro();
-					AreChambersReady();
+					CTRLREMOTE = 1;	
+					DefaultEventSubscription();
+					_CarrierLocationInfo();
+					
+					if(TOOLTYPE == "ALD"){
+						SetPulsarHigLeakCheckTime(10);
+						SetPulsarPumpTimeOut(60);
+					}					
+
+					if(UPDATERECDIR == 0){
+/* 						if(IsDirectoryStructure(FindFile(PJRECIPE_DIR, "", FF_SHOWALL))){ //Already exists
+							mIsYES = GuiMsgBox("Upload Recipes", "Do you want to Upload Recipes Again ?", 3);
+							if(mIsYES == 6){ //Yes clicked
+								_UpdateRecipeDirectories();
+								_UpdateProcessRecipeDir();							
+							}else{
+								logn("*****  Opted to NOT uploading recipes again !");
+							}								
+						}else{
+							_UpdateRecipeDirectories();
+							_UpdateProcessRecipeDir();								
+						} */
+						UPDATERECDIR = 1; //Already done, not doing again			
+						_UpdateRecipeDirectories();
+						_UpdateProcessRecipeDir();							
+					}
+					
+					if(AreChambersReady()){
+						INITIALIZE = 1;
+					}				
+					//_TurnON_Tracing();
 					break;					
 		case 73744: //IssueOperatorCommand
-					logn("*****  GOT ProcessStateChanged  *****");
-					VerifySetup(mS6F11Struct.reportList);
+					//logn("*****  GOT ProcessStateChanged");
+					//VerifySetup(mS6F11Struct.reportList);
 					break;						
 		case 77888: //ProcessStateChanged
-					logn("*****  GOT ProcessStateChanged  *****");
+					//logn("*****  GOT ProcessStateChanged");
 					GetProcessState(mS6F11Struct.reportList);
 					break;						
 		case 77905: //RC1StateChanged
-					logn("*****  GOT RC1StateChanged  *****");
+					//logn("*****  GOT RC1StateChanged");
 					GetRCStatus(1, mS6F11Struct.reportList);
 					break;	
 		case 77906: //RC2StateChanged
-					logn("*****  GOT RC2StateChanged  *****");
+					//logn("*****  GOT RC2StateChanged");
 					GetRCStatus(2, mS6F11Struct.reportList);
 					break;						
 		case 77907: //RC3StateChanged
-					logn("*****  GOT RC3StateChanged  *****");
+					//logn("*****  GOT RC3StateChanged");
 					GetRCStatus(3, mS6F11Struct.reportList);
 					break;						
+		case 77908: //RC4StateChanged
+					//logn("*****  GOT RC4StateChanged");
+					GetRCStatus(4, mS6F11Struct.reportList);
+					break;	
 		case 77921: //RC1RecipeStarted
-					logn("*****  GOT RC1RecipeStarted  *****");
+					//logn("*****  GOT RC1RecipeStarted");
 					break;					
 		case 77922: //RC2RecipeStarted
-					logn("*****  GOT RC2RecipeStarted  *****");
+					//logn("*****  GOT RC2RecipeStarted");
 					break;						
 		case 77923: //RC3RecipeStarted
-					logn("*****  GOT RC3RecipeStarted  *****");
+					//logn("*****  GOT RC3RecipeStarted");
 					break;						
 		case 77924: //RC4RecipeStarted
-					logn("*****  GOT RC4RecipeStarted  *****");
+					//logn("*****  GOT RC4RecipeStarted");
 					break;
+		case 78321: //WaferMovedStartdBERbtLL1
+					//logn("*****  GOT WaferMovedStartdBERbtLL1");
+					break;					
 		case 94224: //MaterialReceived
-					logn("*****  GOT MaterialReceived  *****");
+					//logn("*****  GOT MaterialReceived");				
 					break;					
 		case 94240: //MaterialRemoved
-					logn("*****  GOT MaterialRemoved  *****");
-					ResetMaterialInfo(mS6F11Struct.reportList);					
+					//logn("*****  GOT MaterialRemoved");
+					if(CTRLREMOTE){
+						ResetMaterialInfo(mS6F11Struct.reportList);	
+					}
 					break;
 		case 94256: //MoveInRequest
-					logn("*****  GOT MoveInRequest  *****");
-					SendLoadRequest(mS6F11Struct.reportList);
+					//logn("*****  GOT MoveInRequest");
+					//SendLoadRequest(mS6F11Struct.reportList);					
 					break;						
+		case 94272: //MoveInComplete
+					//logn("*****  GOT MoveInComplete");
+					if(CTRLREMOTE)
+						INTROREADY = 1;
+						//HandleMoveInComplete(mS6F11Struct.reportList);
+					break;					
 		case 94288: //MoveOutRequest
-					logn("*****  GOT MoveOutRequest  *****");
+					//logn("*****  GOT MoveOutRequest");
+					// if(CTRLREMOTE){
+						// HandleMoveOut(mS6F11Struct.reportList);
+					// }
 					break;					
 		case 94304: //MoveOutComplete
-					logn("*****  GOT MoveOutComplete  *****");
-					ResetLoadPort(mS6F11Struct.reportList);
+					//logn("*****  GOT MoveOutComplete");				
 					break;	
+		case 94320: //CarrierLocked
+					//logn("*****  GOT CarrierLocked");	
+					if(CTRLREMOTE){
+						HandleCarrierLocked(mS6F11Struct.reportList);
+					}					
+					break;	
+		case 94352: //CarrierClamped
+					//logn("*****  GOT CarrierClamped");					
+					break;						
 		case 94368: //CarrierUnclamped
-					logn("*****  GOT CarrierUnclamped  *****");
+					//logn("*****  GOT CarrierUnclamped");					
 					break;
+		case 94384: //CarrierDocked
+					//logn("*****  GOT CarrierDocked");
+					HandleCarrierDocked(mS6F11Struct.reportList);
+					break;	
+		case 94400: //CarrierUndocked
+					//logn("*****  GOT CarrierUndocked");
+					HandleCarrierUnDocked(mS6F11Struct.reportList);
+					break;						
 		case 94416: //CarrierOpened
-					logn("*****  GOT CarrierOpened  *****");
+					//logn("*****  GOT CarrierOpened");								
+					break;
+		case 94432: //CarrierCloseed
+					//logn("*****  GOT CarrierCloseed");	
+					//Testing w/o
+					//if(CTRLREMOTE)
+					//	HandleCarrierCloseed(mS6F11Struct.reportList);
+					
+					break;					
+		case 94720: //PJFirstWaferStart
+					//logn("*****  GOT PJFirstWaferStart");
+					//S16_F27_SendCJCommand("1");		
+					HandlePJFirstWaferStart(S6F11Struct.reportList);
+					break;
+		case 94736: //PJLastWaferFinish
+					//logn("*****  GOT PJLastWaferFinish");
 					break;					
 		case 98320: //ECChange
-					logn("*****  GOT ECChange Completed  *****");
+					//logn("*****  GOT ECChange Completed");
 					VerifyChangedValues(mS6F11Struct.reportList);
-					break;					
-		case 106640: //COSMSCT-1(nostate->Carrier)
-					logn("*****  GOT COSMSCT-1(nostate->Carrier)  *****");
-					SetCarrierID(mS6F11Struct.reportList);
 					break;
-		case 106672: //COSMSCT-3(nostate->WTGFORHOST)	
-					logn("*****  GOT COSMSCT-3(nostate->WTGFORHOST)  *****");
-					SendProceedWithCarrier(mS6F11Struct.reportList);
+		case 98336: //PPChange
+					//logn("*****  GOT PPChange or PJRecipe Change");
+					HandleRecipeChange(mS6F11Struct.reportList, "PJRecipe");
+					break;		
+		case 102480: // (DepositionStepFinished)
+					//HandleDepositionStepFinished(mS6F11Struct.reportList);
 					break;
-		case 106752: //COSMSCT-8(WTGFORHOST->IDVEROK)
-					logn("*****  GOT COSMSCT-8(WTGFORHOST->IDVEROK)  *****");
-					//GetLPAndCIDInfo();
-					break;					
-		case 106848: //COSMSCT-14(SLOTMAPNOTREAD->WTGFORHOST)
-					logn("*****  GOT COSMSCT-14(SLOTMAPNOTREAD->WTGFORHOST)  *****");
-					SendProceedWithCarrier(mS6F11Struct.reportList);
-					break;					
-		case 106864: //COSMSCT-15(WTGFORHOST->SLOTMAPVEROK
-					logn("*****  GOT COSMSCT-15(WTGFORHOST->SLOTMAPVEROK  *****");
-					SendCJPJ(mS6F11Struct.reportList);
+		case 102578: //RCPP2Change
+					//logn("*****  GOT RCPP2Change or ProcessRecipe Change");
+					HandleRecipeChange(mS6F11Struct.reportList, "ProcessRecipe");
 					break;	
-		case 106992: //LPCASMSCT-2(NOTASSOCIATED->ASSOCIATED
-					logn("*****  GOT LPCASMSCT-2(NOTASSOCIATED->ASSOCIATED  *****");
-					SetLPAssociationInfo(mS6F11Struct.reportList);
-					break;					
-		case 107008: //LPCASMSCT-3(ASSOCIATED->NOTASSOCIATED)
-					logn("*****  GOT PCASMSCT-3(ASSOCIATED->NOTASSOCIATED)  *****");
-					ResetLoadPort(mS6F11Struct.reportList);
+		case 104720: //CJQueued
+					//logn("*****  GOT CJQueued");								
+					break;						
+		case 106640: //COSMSCT-1(nostate->Carrier)
+					//logn("*****  GOT COSMSCT-1(nostate->Carrier)");							
+					// if(CTRLREMOTE)
+						// SetCarrierID(mS6F11Struct.reportList);	
+					// } 						
 					break;
-		case 107120: //LPTSMSCT-2(OUTOFSERVICE->INSERVICE)
-					logn("*****  GOT LPTSMSCT-2(OUTOFSERVICE->INSERVICE)  *****");
-					//S3_F17_BindServiceRequest_LP1("LotABC: WaferA, WaferB, WaferC");
-					break;					
-		case 107184: //LPTSMSCT-5(TRANSFERREADY->READYTOLOAD)
-					logn("*****  GOT LPTSMSCT-5(TRANSFERREADY->READYTOLOAD)  *****");
-					// if (!IsString(LP1_CID)){
-						// S3_F17_BindServiceRequest_LP1("LotABC: WaferA, WaferB, WaferC");
+		case 106656: //COSMSCT-2(nostate->IDNOTREAD)
+					//logn("*****  GOT COSMSCT-2(nostate->IDNOTREAD)");	
+					if(INTROSTART && BIND && !BIND_SENT)					
+						S3_F17_CancelCarrierNotificationAtPort("1", 1);//CarrierID 1, PortID 1					
+					break;						
+		case 106672: //COSMSCT-3(nostate->WTGFORHOST) //Tool only ACK'ed properly at this state ID Reader = ON	
+					//logn("*****  GOT COSMSCT-3(nostate->WTGFORHOST)");
+					// if (INTROSTART){ //First PWC based on w/oCarrierID Reader: ON-LINE REMOTE: w/oBind
+						// Send_S3_F17(mS6F11Struct.reportList, mCeId);
+					// } 							
+					break;
+		case 106688: //COSMSCT-4(nostate->IDVEROK)
+					//logn("*****  GOT COSMSCT-4(nostate->IDVEROK)");								
+					break;						
+		case 106752: //COSMSCT-8(WTGFORHOST->IDVEROK)
+					//logn("*****  GOT COSMSCT-8(WTGFORHOST->IDVEROK)");					
+					//GetLPAndCIDInfo();	
+					if (INTROSTART){ //Second PWC based on w/oCarrierID Reader: ON-LINE REMOTE
+						Send_S3_F17(mS6F11Struct.reportList, mCeId);
+					} 						
+					break;				
+		case 106784: //COSMSCT-10(IDNOTREAD->WTGFORHOST)
+					//logn("*****  GOT COSMSCT-10(IDNOTREAD->WTGFORHOST)");
+					if (INTROSTART){ //First PWC based on w/CarrierID Reader: ON-LINE REMOTE: w/Bind
+						Send_S3_F17(mS6F11Struct.reportList, mCeId);
+					} 					
+					break;
+		case 106800: //COSMSCT-11(IDNOTREAD->IDVEROK)
+					//logn("*****  GOT COSMSCT-11(IDNOTREAD->IDVEROK)"); 
+					if (INTROSTART){
+						Send_S3_F17(mS6F11Struct.reportList, mCeId);
+					} 					
+					break;			
+		case 106816: //COSMSCT-12(nostate->SMPNTREAD)
+					//logn("*****  GOT COSMSCT-12(nostate->SMPNTREAD)");						
+					break;						
+		case 106832: //COSMSCT-13(SLOTMAPNOTREAD->SLMAPVEROK)
+					//logn("*****  GOT COSMSCT-13(SLOTMAPNOTREAD->SLMAPVEROK)");
+					// if (INTROSTART){
+						// SendCJPJ(mS6F11Struct.reportList);
+						// INTROSTART = 0;
 					// }					
 					break;						
+		case 106848: //COSMSCT-14(SLOTMAPNOTREAD->WTGFORHOST)
+					//logn("*****  GOT COSMSCT-14(SLOTMAPNOTREAD->WTGFORHOST)");	
+					if (INTROSTART){
+						Send_S3_F17(mS6F11Struct.reportList, mCeId);
+					} 					
+					break;					
+		case 106864: //COSMSCT-15(WTGFORHOST->SLOTMAPVEROK
+					//logn("*****  GOT COSMSCT-15(WTGFORHOST->SLOTMAPVEROK");
+					// if (INTROSTART){
+						// SendCJPJ(mS6F11Struct.reportList);
+						// INTROSTART = 0;
+					// }
+					if (INTROSTART){
+						Send_S3_F17(mS6F11Struct.reportList, mCeId);
+					} 					
+					break;	
+		case 106880: //COSMSCT-16(WTGFORHOST->SLOTMAPVERFAIL)
+					//logn("*****  GOT COSMSCT-16(WTGFORHOST->SLOTMAPVERFAIL)");
+					break;					
+		case 106896: //COSMSCT-17(nostate->NOTACCESSED)
+					//logn("*****  GOT COSMSCT-17(nostate->NOTACCESSED)");							
+					break;
+		case 106928: //COSMSCT-19(INACCESS->CARRIERCOMPLETE)
+					//logn("*****  GOT COSMSCT-19(INACCESS->CARRIERCOMPLETE)");
+					//HandleCarrierComplete(mS6F11Struct.reportList);
+					break;						
+		case 106960: //COSMSCT-21(CARRIER->nostate)
+					//logn("*****  GOT COSMSCT-21(CARRIER->nostate)");	
+					if(INTROSTART && BIND && !BIND_SENT){
+						SendBindServiceRequest(mCeId);
+					}					
+					break;						
+		case 106992: //LPCASMSCT-2(NOTASSOCIATED->ASSOCIATED
+					//logn("*****  GOT LPCASMSCT-2(NOTASSOCIATED->ASSOCIATED");					
+					if(CTRLREMOTE){
+						HandleLPAssociation(mS6F11Struct.reportList);
+						//S3_F17_PWC_With_ContentMap("Carrier1-01");						
+						Send_S3_F17(mS6F11Struct.reportList, mCeId); //Comment this line if do not want FOUP automatically docked again ready for new job
+					}
+					break;					
+		case 107008: //LPCASMSCT-3(ASSOCIATED->NOTASSOCIATED)
+					//logn("*****  GOT PCASMSCT-3(ASSOCIATED->NOTASSOCIATED)");
+					// if(CTRLREMOTE)
+						// ResetLoadPort(mS6F11Struct.reportList);
+					break;
+		case 107024: //LPCASMSCT-4(ASSOCIATED->ASSOCIATED)
+					//logn("*****  GOT LPCASMSCT-4(ASSOCIATED->ASSOCIATED)");						
+					break;						
+		case 107072: //LPRSMSCT-3(RESERVED->NOTRESERVED)
+					//logn("*****  GOT LPRSMSCT-3(RESERVED->NOTRESERVED)");							
+					break;						
+		case 107120: //LPTSMSCT-2(OUTOFSERVICE->INSERVICE)
+					//logn("*****  GOT LPTSMSCT-2(OUTOFSERVICE->INSERVICE)");
+					break;					
+		case 107152: //LPTSMSCT-4(INSERVICE->TRANSFERBLOCKED)
+					//logn("*****  GOT LPTSMSCT-4(INSERVICE->TRANSFERBLOCKED)");					
+					break;						
+		case 107184: //LPTSMSCT-5(TRANSFERREADY->READYTOLOAD)
+					//logn("*****  GOT LPTSMSCT-5(TRANSFERREADY->READYTOLOAD)");	
+					if(INTROSTART && BIND && !BIND_SENT){
+						SendBindServiceRequest(mCeId);
+					}					
+					break;						
 		case 107216: //LPTSMSCT-6(READYTOLOAD->TRANSFERBLOCKED)
-					logn("*****  GOT LPTSMSCT-6(READYTOLOAD->TRANSFERBLOCKED)  *****");
+					//logn("*****  GOT LPTSMSCT-6(READYTOLOAD->TRANSFERBLOCKED)");					
 					break;					
 		case 107248: //LPTSMSCT-8(TRANSFERBLOCKED->READYTOLOAD
-					logn("*****  GOT LPTSMSCT-8(TRANSFERBLOCKED->READYTOLOAD  *****");
-					SendLoadRequest();
+					//logn("*****  GOT LPTSMSCT-8(TRANSFERBLOCKED->READYTOLOAD");		
+					if(INTROSTART && BIND && !BIND_SENT){
+						SendBindServiceRequest(mCeId);
+					}					
 					break;					
 		case 107392: //CarrierLocationChanged
-					logn("*****  GOT CarrierLocationChanged  *****");
-					GetLPAndCIDInfo(mS6F11Struct.reportList);
+					//logn("*****  GOT CarrierLocationChanged");
+					//GetLPAndCIDInfo(mS6F11Struct.reportList);
+					HandleCarrierLocationChanged(mS6F11Struct.reportList);
 					break;
-		case 114736: //CJSMSCT-3(QUEUED->SELECTED)
-					logn("*****  CJSMSCT-3(QUEUED->SELECTED)  *****");
-					CJSelected(mS6F11Struct.reportList);
+		case 110608: // PJSMSCT-1(nostate->POOLED)
+					//APC validation GetCurrentTemp("17629185"); 
+					//GetCurrentProcessState();
+					break;
+		case 110624: // PJSMSCT-2(POOLED->SETTINGUP)
+					//APC validation GetCurrentTemp("17629185");
+					//GetCurrentProcessState();
+					break;
+		case 110640: // PJSMSCT-3(SETTINGUP->WAITINGFORSTART)
+					//GetCurrentProcessState();
+					break;
+		case 110656: // PJSMSCT-4(SETTINGUP->PROCESSING)
+					//APC validation GetCurrentTemp("17629185");
+					//GetCurrentProcessState();
+					break;
+		case 400000028: // Mecca (PRJobProcessing)
+					//S7_F17_DeleteRecipeRequest("Pm1_10s");
+					//mS7F18_Reply = S7F17_Request(S2_A("/SEQUENCE/Pm1_10s"));
+					//S7F18_Parser(mS7F18_Reply);					
+		case 110672: // PJSMSCT-5(WAITINGFORSTART->PROCESSING)
+					//GetCurrentProcessState();
+					break;
+		case 110688: // PJSMSCT-6(PROCESSING->PROCESSINGCOMPLETE)
+					//APC validation  GetCurrentTemp("17629185");
+					//S2_F15_SetEquipmentConstants("17629185=22.2");
+					//GetCurrentProcessState();
+					break;
+		case 110704: // PJSMSCT-7(PROCESSCOMPLETE->nostate)
+					//GetCurrentProcessState();
+					break;
+		case 110720: // PJSMSCT-8(EXECUTING->PAUSING)
+					//GetCurrentProcessState();
+					break;
+		case 110736: // PJSMSCT-9(PAUSING->PAUSED)
+					//GetCurrentProcessState();
+					break;
+		case 110752: // PJSMSCT-10(PAUSE->EXECUTING)
+					//GetCurrentProcessState();
+					break;
+		case 110768: // PJSMSCT-11(EXECUTING->STOPPING)
+					//GetCurrentProcessState();
+					break;
+		case 110784: // PJSMSCT-12(PAUSE->STOPPING)
+					//GetCurrentProcessState();
+					break;
+		case 110800: // PJSMSCT-13(EXECUTING->ABORTING)
+					//GetCurrentProcessState();
+					break;
+		case 110816: // PJSMSCT-14(STOPPING->ABORTING)
+					//GetCurrentProcessState();
+					break;
+		case 110832: // PJSMSCT-15(PAUSE->ABORTING)
+					//GetCurrentProcessState();
+					break;
+		case 110848: // PJSMSCT-16(ABORTING->nostate)
+					//GetCurrentProcessState();
+					break;
+		case 110864: // PJSMSCT-17(STOPPING->nostate)
+					//GetCurrentProcessState();
+					break;
+		case 110880: // PJSMSCT-18(POOLED->nostate)
+					//GetCurrentProcessState();
+					break;
+		case 110896: // PJSMSCT-19(STOPPING->PAUSING)
+					//GetCurrentProcessState();
+					break;
+		case 110912: // PJSMSCT-20(ABORTING->PAUSING)
+					//GetCurrentProcessState();
 					break;						
-		case 114848: //CJSMSCT-10(EXECUTING->COMPLETED
-					logn("*****  GOT CJSMSCT-10(EXECUTING->COMPLETED  *****");
+		case 114704: //CJSMSCT-1(nostate->QUEUED)
+					//logn("*****  GOT CJSMSCT-1(nostate->QUEUED)");
+					if(CTRLREMOTE){
+						HandleCJQueued(mS6F11Struct.reportList);
+					}
+					run(GetCurrentProcessState);
 					break;					
-		case 118800: //SLSMSCT-1(UNOCCUPIED->OCCUPIED)
-					logn("*****  GOT SLSMSCT-1(UNOCCUPIED->OCCUPIED)  *****");
-					break;		
+		case 114736: //CJSMSCT-3(QUEUED->SELECTED)
+					//logn("*****  GOT CJSMSCT-3(QUEUED->SELECTED)");					
+					if(CTRLREMOTE){
+						HandleCJSelected(mS6F11Struct.reportList);	
+						//APC validation GetCurrentTemp("17629185");
+					}
+					run(GetCurrentProcessState);					
+					break;
+		case 114752: //CJSMSCT-4(SELECTED->QUEUED)
+					//logn("*****  GOT CJSMSCT-4(SELECTED->QUEUED)");
+					break;						
+		case 114768: //CJSMSCT-5(SELECTED->EXECUTING)
+					//logn("*****  GOT CJSMSCT-5(SELECTED->EXECUTING)");
+					//S16_F27_SendCJCommand(CJID);
+					if(CTRLREMOTE){
+						HandleCJExecuting(mS6F11Struct.reportList);
+						//APC validation GetCurrentTemp("17629185");
+					}
+					run(GetCurrentProcessState);					
+					break;	
+		case 114848: //CJSMSCT-10(EXECUTING->COMPLETED
+					//logn("*****  GOT CJSMSCT-10(EXECUTING->COMPLETED");
+					//Unloading(mS6F11Struct.reportList);
+					if(CTRLREMOTE){
+						HandleCJCompleted(mS6F11Struct.reportList);
+						//APC validation GetCurrentTemp("17629185");						
+					}
+					run(GetCurrentProcessState);
+					break;					
+		case 114896: //CJSMSCT-13(COMPLETED->nostate)
+					//logn("*****  GOT CJSMSCT-13(COMPLETED->nostate)");
+					//APC validation GetCurrentTemp("17629185");
+					//GetCurrentProcessState();
+					break;						
+		// case 118800: //SLSMSCT-1(UNOCCUPIED->OCCUPIED)
+					// logn("*****  GOT SLSMSCT-1(UNOCCUPIED->OCCUPIED)");
+					// break;		
 		case 119040: //SOSMSCT-10(nostate->NEEDSPROCESSING)
-					logn("*****  GOT SOSMSCT-10(nostate->NEEDSPROCESSING)  *****");
+					//logn("*****  GOT SOSMSCT-10(nostate->NEEDSPROCESSING)");					
 					break;						
 		default:
 					break;
 	}
 	
-	logn("Thinh <- EventHandler()" );	
+	logn("Thinh <- DefaultEventHandler()");	
+}
+
+HandleCarrierComplete(ReportList){
+	local mPortIDReport, mPortIdList, mPortId, mCarrierIDReport, mCarrierIDList, mCarrierID;
+	logn(">>>>>  HandleCarrierComplete  <<<<<");
+
+	S3_F17_CarrierRelease("1", 1);	
+}
+
+HandlePJFirstWaferStart(ReportList){
+	local MoveFeRbtReport, mCtrlJobID;
+	logn(">>>>>  HandlePJFirstWaferStart  <<<<<");
+	MoveFeRbtReport = Decode(ReportList[1]);
+	MoveFeRbtReportList = Smart_Decode(MoveFeRbtReport[1]);	
+	mCtrlJobID = Smart_Decode(MoveFeRbtReportList[0]);	
+	logn("mCtrlJobID: ", mCtrlJobID);
+	// if(ABORTED == 0){
+		// ABORTED = 1;
+		// S16_F27_SendCJCommand(mCtrlJobID, 7);
+	// }	
+}
+HandleDepositionStepFinished(ReportList){
+	local ProcessStepEndReport, ProcessStepEndReportList, mCtrlJobID;
+	logn(">>>>>  HandleDepositionStepFinished  <<<<<");
+	ProcessStepEndReport = Decode(ReportList[1]);
+	ProcessStepEndReportList = Smart_Decode(ProcessStepEndReport[1]);	
+	mCtrlJobID = Smart_Decode(ProcessStepEndReportList[0]);	
+	logn("mCtrlJobID: ", mCtrlJobID);
+	if(ABORTED == 0){
+		ABORTED = 1;
+		S16_F27_SendCJCommand(mCtrlJobID, 7);
+	}
+}
+					
+SendBindServiceRequest(byCEID){
+	local S1F4_Reply, mPort1TransferState, mPort1ReservationState, mPort1AssociationState, mStatus, mVids;
+	logn("SendBindServiceRequest by CEID", byCEID);
+	//Port1TransferState, Port1ReservationState, Port1AssociationState
+	mVids = NewList(S2_U4(33947745), S2_U4(33947777), S2_U4(33947729));
+	S1F4_Reply = S1F3_Request(mVids); 
+	mStatus = S1F4_Parser(S1F4_Reply, mVids);
+	mPort1TransferState = 	mStatus[0];	
+	mPort1ReservationState = 	mStatus[1];	
+	mPort1AssociationState = 	mStatus[2];	
+	
+	if (mPort1TransferState == 2 && mPort1ReservationState == 0 && mPort1AssociationState == 0){
+		mStatus = S3_F17_BindServiceRequest_LP1(BIND_INFO);
+		if(mStatus != 1){
+			S3_F17_CancelCarrierAtPort1();
+		}else{
+			BIND_SENT = 1;		
+			BIND = 0;			
+		}
+	}else{
+		logn("mPort1TransferState : READYTOLOAD : ", mPort1TransferState);
+		logn("mPort1ReservationState : NOTRESERVED : ", mPort1ReservationState);
+		logn("mPort1AssociationState : NOTASSOCIATED : ", mPort1AssociationState);		
+	}
+}
+
+DebugOutOfOrderCJEvent(ReportList){
+	local i, mCJIDReport, mCtrlJobIDList, mCtrlJobID, mPortID;
+	logn(">>>>>  DebugOutOfOrderCJEvent  <<<<<");
+	mCJIDReport 	= Decode(ReportList[1]);
+	mCtrlJobIDList 	= Decode(mCJIDReport[1]);
+	mCtrlJobID 		= Smart_Decode(mCtrlJobIDList[0]);	
+}
+
+Unloading(ReportList){
+	local i, mCJIDReport, mCtrlJobIDList, mCtrlJobID, mPortID;
+	logn(">>>>>  Unloading  <<<<<");
+	mCJIDReport 	= Decode(ReportList[1]);
+	mCtrlJobIDList 	= Decode(mCJIDReport[1]);
+	mCtrlJobID 		= Smart_Decode(mCtrlJobIDList[0]);
+	//logn("mCtrlJobID: ", mCtrlJobID);
+	for(i = 0; i < TOTALPORT; i = i + 1){
+		//logn("INTRO[i].cjid: ", INTRO[i].cjid);
+		if(INTRO[i].cjid == mCtrlJobID){
+			mPortID = INTRO[i].portid;
+			//logn("mPortID: ", mPortID);
+			if(BIND_SENT)
+				S3_F17_CancelBind_LP1();
+			
+			break;
+		}
+	}
+	
+	//S2_F49_LPUnLoadRequest_LP(mPortID);
 }
 
 VerifySetup(ReportList){
 	local mOperatorCommandReport, mOperatorCommand, OperatorCommandList;
-	mOperatorCommandReport 	= Decode(ReportList[1]);
+	mOperatorCommandReport 	= Decode(ReportList[0]);
 	OperatorCommandList 	= Decode(mOperatorCommandReport[1]);
-	mOperatorCommand 		= Smart_Decode(OperatorCommandList[0]);
+	mOperatorCommand 		= Smart_Decode(OperatorCommandList[5]);
 	//logn("mOperatorCommand: ", mOperatorCommand);
 	if(mOperatorCommand == "SetupStart"){
 		logn("****************************************************");
-		logn("*** Setting up! Please wait until chambers ready ***");
-		logn("****************************************************");	
-		if(GetCount(INTRO) < 1){
-			Initialize_Intro();
-		}		
+		logn("*** Setting up! Please wait until chambers ready");
+		logn("****************************************************");		
+	}
+}
+//84410400 : CtrlJobState : 0=QUEUED,1=SELECTED,2=WAITING-FOR-START,3=EXECUTIING,4=PAUSED,5=COMPLETED,6=CANCELED,7=STOPPED,8=ABORTED : 
+GetCJState(StateID){
+	local mStateName;
+	Switch(StateID){
+		Case -1 : mStateName = "CREATED"; break;
+		Case 0 : mStateName = "QUEUED"; break;
+		Case 1: mStateName = "SELECTED"; break;
+		Case 2 : mStateName = "WAITING-FOR-START"; break;
+		Case 3 : mStateName = "EXECUTING"; break;
+		Case 4 : mStateName = "PAUSED"; break;
+		Case 5 : mStateName = "COMPLETED"; break;
+		Case 6 : mStateName = "CANCELED"; break;
+		Case 7 : mStateName = "STOPPED"; break;
+		Case 8 : mStateName = "ABORTED"; break;
+		Default : logn("StateID: ", StateID); mStateName = "UNKNOWN";
+	}
+	return (mStateName);
+}
+
+// CJState: 0=QUEUED,1=SELECTED,2=WAITING-FOR-START,3=EXECUTIING,4=PAUSED,5=COMPLETED,6=CANCELED,7=STOPPED,8=ABORTED
+UpdateCJState(Cjid, StateID){
+	local i, mFound, mDateTime, mCJSMSCT, mCJStruct, mCurrentStateName, mPreviousStateName;
+	mCJStruct = NewStructured(CJSTATE_STRUCT);
+	mCJStruct.stateID = StateID;
+	mCurrentStateName = DictionaryLookup(mCJStruct, CJSTATE_DICT).stateName;
+	logn("**** UpdateCJState: ", Cjid, " -> ", mCurrentStateName , " ****");
+	
+	for(i=0; i < GetCount(INTRO); i=i+1){
+		logn(i, ": ", INTRO[i].cjid);
+		if(INTRO[i].cjid == Cjid){
+			mCJStruct.stateID = INTRO[i].CJstate;
+			mPreviousStateName = DictionaryLookup(mCJStruct, CJSTATE_DICT).stateName;
+			logn(Cjid, ": Changing from ", mPreviousStateName, " -> ", mCurrentStateName);
+			
+			if(StateID != 0 && INTRO[i].CJstate == 3 && StateID != 5){	
+				mDateTime = GetDateTime();
+				logn("BUG FOUND: ", mDateTime);
+				GuiMsgBox ("BUG FOUND AT ", mDateTime, 0, 1024);
+				abort();				
+			}else if(StateID != 0 && INTRO[i].CJstate > StateID){
+				mDateTime = GetDateTime();
+				logn("BUG FOUND: ", mDateTime);
+				GuiMsgBox ("BUG FOUND AT ", mDateTime, 0, 1024);
+				abort();
+			}else{
+				logn("Update: ", Cjid, " (", INTRO[i].CJstate, " -> ", StateID, ")");
+				INTRO[i].CJstate = StateID;
+				break;
+			}
+		}
 	}
 }
 
-CJSelected(ReportList){
+HandleCarrierLocationChanged(ReportList){
+	local mPortIDReport, mPortIdList, mPortId, mCarrierIDReport, mCarrierIDList, mCarrierID;
+	mCarrierIDReport 	= Decode(reportList[1]); 
+	mCarrierIDList 		= Decode(mCarrierIDReport[1]);			
+	mCarrierID			= Smart_Decode(mCarrierIDList[0]);		
+	mPortIDReport 	= Decode(reportList[2]); 
+	mPortIDList 	= Decode(mPortIDReport[1]); 
+	mPortID 		= Smart_Decode(mPortIDList[0]);
+		
+	CID 				= mCarrierID;
+	logn("**** HandleCarrierLocationChanged CID: ", CID, " ****");
+	//S3_F17_CarrierActionRequest("ProceedWithCarrier", mCarrierID, mPortID);	
+}
+HandleCJQueued(ReportList){ //CeId:114704 (CJSMSCT-1(nostate->QUEUED))
 	local i, mCJIDReport, mCtrlJobIDList, mCtrlJobID;
 	mCJIDReport 	= Decode(ReportList[1]);
 	mCtrlJobIDList 	= Decode(mCJIDReport[1]);
-	mCtrlJobID 		= S2_Decode(mCtrlJobIDList[0]);
-	for (i = 0; i < GetCount(INTRO); i = i + 1){
-		;
+	mCtrlJobID 		= Smart_Decode(mCtrlJobIDList[0]);
+	UpdateCJState(mCtrlJobID, 0); //0 = QUEUED	
+	
+	for(i=0; i < GetCount(INTRO); i=i+1){
+		//logn(i, ": ", INTRO[i].cjid);
+		logn(i, ": CJstate: ", INTRO[i].CJstate);
+		// if(INTRO[i].cjid == mCtrlJobID){
+			// if(INTRO[i].CJstate != -1){
+				// GuiMsgBox ("BUG FOUND AT ", GetDateTime(), 0);
+			// }
+		// }
+	}	
+}
+
+HandleCJSelected(ReportList){ //CeId:114736 (CJSMSCT-3(QUEUED->SELECTED))
+	local i, mCJIDReport, mCtrlJobIDList, mCtrlJobID, mCarrierID, mPortID, mCarrierState;
+	mCJIDReport 	= Decode(ReportList[1]);
+	mCtrlJobIDList 	= Decode(mCJIDReport[1]);
+	mCtrlJobID 		= Smart_Decode(mCtrlJobIDList[0]);
+	UpdateCJState(mCtrlJobID, 1); //1 = SELECTED
+	for(i=0; i < GetCount(INTRO); i=i+1){
+		//logn(i, ": ", INTRO[i].cjid);
+		if(INTRO[i].cjid == mCtrlJobID){
+			mCarrierState = INTRO[i].state;
+			logn("mCarrierState: ", mCarrierState);
+			// if(mCarrierState == "PWC1"){ //Makeup for the last 2nd PWC fail
+				// mCarrierID = INTRO[i].carrierid;
+				// mPortID = INTRO[i].portid;
+				// if(S3_F17_CarrierActionRequest("ProceedWithCarrier", mCarrierID, mPortID)){
+					// INTRO[mPortID-1].state = "PWC2";
+					// logn("**** Makeup PWC2 ****");
+				// }				
+			// }else 
+			if(mCarrierState == "INTRO"){ //LP was not fully initialized at startup
+				mCarrierID = INTRO[i].carrierid;
+				mPortID = INTRO[i].portid;
+				if (PROCESSSTATE == 1 || PROCESSSTATE == 2){ //READY or RUN
+					if(S3_F17_CarrierActionRequest("ProceedWithCarrier", mCarrierID, mPortID)){
+						INTRO[mPortID-1].state = "PWC2";
+						logn("**** Makeup PWC2 ****");
+					}
+				}else {
+					if(S3_F17_CarrierActionRequest("ProceedWithCarrier", mCarrierID, mPortID)){
+						INTRO[mPortID-1].state = "PWC1";
+						logn("**** Makeup PWC1 ****");
+						wait(NewTimer(2));	//sleep for 2 secs
+						if(S3_F17_CarrierActionRequest("ProceedWithCarrier", mCarrierID, mPortID)){
+							INTRO[mPortID-1].state = "PWC2";
+							logn("**** Makeup PWC2 ****");
+						}
+					}						
+				}			
+			}
+			
+			break;
+		}
+	}	
+}
+
+HandleCJExecuting(ReportList){ //CeId:114768 (CJSMSCT-5(SELECTED->EXECUTING))
+	local i, mCJIDReport, mCtrlJobIDList, mCtrlJobID;
+	mCJIDReport 	= Decode(ReportList[1]);
+	mCtrlJobIDList 	= Decode(mCJIDReport[1]);
+	mCtrlJobID 		= Smart_Decode(mCtrlJobIDList[0]);
+	UpdateCJState(mCtrlJobID, 3); //3 = EXECUTING
+	CJSTART = CJSTART + 1;
+	//S1F11_Request();
+}
+
+HandleCJCompleted(ReportList){ //CeId:114848 (CJSMSCT-10(EXECUTING->COMPLETED))
+	local i, mCJIDReport, mCtrlJobIDList, mCtrlJobID;
+	mCJIDReport 	= Decode(ReportList[1]);
+	mCtrlJobIDList 	= Decode(mCJIDReport[1]);
+	mCtrlJobID 		= Smart_Decode(mCtrlJobIDList[0]);
+	UpdateCJState(mCtrlJobID, 5); //5 = COMPLETED
+	CJCOMPLETE = CJCOMPLETE + 1;
+	for(i=0; i < GetCount(INTRO); i=i+1){
+		//logn(i, ": ", INTRO[i].cjid);
+		if(INTRO[i].cjid == mCtrlJobID){
+			INTRO[i].cjid = "";
+			INTRO[i].CJstate = -1;
+			//logn("state: ", INTRO[i].state);
+			INTRO[i].state = "";
+		}
+	}		
+	if(RenameOldLog()){
+		logn("CJSTART: ", CJSTART);
+		logn("CJCOMPLETE: ", CJCOMPLETE);
+		DeleteOldLog();
 	}
+	//S3_F17_CarrierRelease("1", 1);	
+}
+
+SetNewTemp(EcIdsAndTemps){
+	local i, mEcidAndTemps, mEcidAndTemp, mEcId, mTemp, mSecsEcIdList, mNameValuePair, mEcIdList, mS2F14_Reply, mValues;
+	logn("->SetNewTemp()");
+	
+	//mEcidAndTemps = MakeListFromString(EcIdsAndTemps);
+	//for(i = 0;i < GetCount(mEcidAndTemps);i = i + 1){
+		mEcidAndTemp = splitString(EcIdsAndTemps, "=");
+		
+		mEcId = AtoI(mEcidAndTemp[0]);
+		mTemp = AtoI(mEcidAndTemp[1]);
+		mNameValuePair = InsertFirst(S2_F4(mTemp), mNameValuePair); //U2: 0 to 65,535			
+		mNameValuePair = InsertFirst(S2_U4(mEcId), mNameValuePair); //U4: 0 to 4,294,967,295	
+		mSecsEcIdList = InsertFirst(S2_L(mNameValuePair), mSecsEcIdList);
+		
+		mEcIdList = InsertFirst(S2_U4(mEcId), mEcIdList);
+	//}	
+	
+	mS2F14_Reply = S2F13_Request(mEcIdList);
+	mValues = S2F14_Parser(mS2F14_Reply, mEcIdList);
+	logn("mValues: ", mValues);
+	
+	S2_F15_SetEquipmentConstants(mSecsEcIdList);
+}
+
+GetCurrentTemp(EcIds){
+	local i, mSecsEcIdList, mEcIds, mEcId, mValues, mValue, mS2F14_Reply;
+	
+	logn("->GetCurrentTemp()");
+	mEcIds = MakeListFromString(EcIds);
+	for(i = 0;i < GetCount(mEcIds);i = i + 1){
+		mEcId = AtoI(mEcIds[i]);
+		mSecsEcIdList = InsertFirst(S2_U4(mEcId), mSecsEcIdList);
+	}
+		
+	mS2F14_Reply = S2F13_Request(mSecsEcIdList);
+	mValues = S2F14_Parser(mS2F14_Reply, mSecsEcIdList);
+	logn("mValues: ", mValues);
 }
 
 SendLoadRequest(ReportList){
@@ -220,9 +765,9 @@ SendLoadRequest(ReportList){
 	
 	if(IsEmptyList(ReportList)){
 		for (i = 0; i < GetCount(mValues); i = i + 1){
-			if(INTRO[i].State == "INTRO"){
-				INTRO[i].State = "LOAD";
-				S2_F49_LPLoadRequest_LP(INTRO[i].portid);			
+			if(INTRO[i].state == "INTRO"){
+				INTRO[i].state = "LOAD";
+				S2_F49_LPLoad_Request(INTRO[i].portid);			
 			}
 		}		
 	}else{
@@ -230,72 +775,188 @@ SendLoadRequest(ReportList){
 		mPortInfoList 	 = Decode(mMaterialOReport[1]);
 		mPortLocID		 = S2_Decode(mPortInfoList[0]);
 		
-		if(INTRO[mPortLocID-1].State == "INTRO"){
-			INTRO[mPortLocID-1].State = "LOAD";
-			S2_F49_LPLoadRequest_LP(mPortLocID);
+		if(INTRO[mPortLocID-1].state == "INTRO"){
+			INTRO[mPortLocID-1].state = "LOAD";
+			S2_F49_LPLoad_Request(mPortLocID);
 		}		
 	}
 }
 
 SendCJPJ(ReportList){
-	local mCarrierIDReport, mCarrierIDList, mCarrierID, mPortIDReport, mPortIDList, mPortID;
+	local mCarrierIDReport, mCarrierIDList, mCarrierID, mPortIDReport, mPortIDList, mPortID, mPJCreateStatus;
 	mPortIDReport 	= Decode(reportList[1]); 
 	mPortIDList 	= Decode(mPortIDReport[1]); 
 	mPortID 		= S2_Decode(mPortIDList[0]); 
-	mCarrierIDReport = Decode(reportList[2]); 
-	mCarrierIDList 	= Decode(mCarrierIDReport[1]); 
-	//mCarrierID		= S2_Decode(mCarrierIDList[0]);
+	// mCarrierIDReport = Decode(reportList[2]); 
+	// mCarrierIDList 	= Decode(mCarrierIDReport[1]); 
+	// mCarrierID		= Smart_Decode(mCarrierIDList[0]);
+	logn(">>>>>  SendCJPJ  <<<<<");	
 	
-	INTRO[mPortID-1].carrierid = S2_Decode(mCarrierIDList[0]);
+	//INTRO[mPortID-1].carrierid = mCarrierID;
 	
-	if(INTRO[mPortID-1].State == "PWC"){
-		logn(">>>>>  SendCJPJ  <<<<<");	
-		INTRO[mPortID-1].State = "RUN";
-		if(INTRO[mPortID-1].pjCmd == "S16F11"){
-			S16_F11_PRJobCreateEnhRequest(INTRO[mPortID-1]);
-		}else if(INTRO[mPortID-1].pjCmd == "S16F15"){
-			S16_F15_ProcessJobMultiCreateRequest(INTRO[mPortID-1]);
-			//S16F16_Parser(wait(SendPrimary(SEND_S16F15)));
-		}		
-		wait( NewTimer( 1 ) );	//sleep for 1 sec
+	//if(INTRO[mPortID-1].state == "PWC"){
+		
+	INTRO[mPortID-1].state = "RUN";
+	if(INTRO[mPortID-1].pjCmd == "S16F11"){
+		mPJCreateStatus = SendProcessJob("S16F11", INTRO[mPortID-1], 1);
+	}else if(INTRO[mPortID-1].pjCmd == "S16F15"){
+		mPJCreateStatus = SendProcessJob("S16F15", INTRO[mPortID-1], 1);
+		//S16F16_Parser(wait(SendPrimary(SEND_S16F15)));
+	}		
+	wait(NewTimer(1));	//sleep for 1 sec
+	if (mPJCreateStatus)
 		S14_F9_CreateCJobObjectRequest(INTRO[mPortID-1]);
+	else
+		logn(">>>>>  No CJ creation request because PJ creation failed   <<<<<");
 		//S14F10_Parser(wait(SendPrimary(SEND_S14F9)));		
-	}	
+	//}	
 }
 
-SendProceedWithCarrier(ReportList){
-	local mCarrierIDReport, mCarrierIDList, mPortIDReport, mPortIDList, mPortID;
-	logn(">>>>>  SendProceedWithCarrier  <<<<<");
-	mPortIDReport 	= Decode(reportList[1]); 
-	mPortIDList 	= Decode(mPortIDReport[1]); 
-	mPortID 		= S2_Decode(mPortIDList[0]); 
-	mCarrierIDReport = Decode(reportList[2]); 
-	mCarrierIDList 	= Decode(mCarrierIDReport[1]); 
-	CID				= S2_Decode(mCarrierIDList[0]);
-	
-	if(INTRO[mPortID-1].State == "INTRO" || INTRO[mPortID-1].State == "LOAD" || INTRO[AtoI(CID)-1].State == "PWC"){
-		S3_F17_CarrierActionRequest("ProceedWithCarrier", CID, mPortID);
-		INTRO[AtoI(CID)-1].State = "PWC";
+Send_S3_F17(ReportList, byCEID){
+	local i, mCarrierIDReport, mCarrierIDList, mPortIDReport, mPortIDList, mPortID, mCarrierID, mCAtt;
+	local mCJIDReport, mCJIDList, mCJID;// mPortAssociationStateReport, mPortAssociationState;
+	logn(">>>>>  Send_S3_F17 by ", byCEID, " <<<<<");
+
+	if(CUSRPT == 0){ //Not Custom report
+		INTRO[1-1].state = "PWC";
+		
+		if(BIND || BIND_SENT)
+			INTRO[1-1].carrierid = ASMLOT;
+		
+		mCarrierID = INTRO[1-1].carrierid;
+		mPortID = 1;
+		
+		switch(byCEID){
+			case 106672: //COSMSCT-3(nostate->WTGFORHOST)
+			case 106848: //COSMSCT-14(SLOTMAPNOTREAD->WTGFORHOST)
+				//logn("byCEID: ", byCEID);
+				mPortIDReport 		= Decode(reportList[1]); 
+				mPortIDList 		= Decode(mPortIDReport[1]); 
+				mPortID 			= Smart_Decode(mPortIDList[0]);
+				mCarrierIDReport 	= Decode(reportList[2]); 
+				mCarrierIDList 		= Decode(mCarrierIDReport[1]);			
+				mCarrierID			= Smart_Decode(mCarrierIDList[0]);			
+				CID 				= mCarrierID;
+				logn(byCEID, ": ProceedWithCarrier ", mCarrierID);				
+				break;
+			case 106752: //COSMSCT-8(WTGFORHOST->IDVEROK)
+			case 106864: //COSMSCT-15(WTGFORHOST->SLOTMAPVEROK)
+				break;
+			case 106992: //LPCASMSCT-2(NOTASSOCIATED->ASSOCIATED)
+				mPortIDReport 				= Decode(reportList[1]);
+				mPortIDList 				= Decode(mPortIDReport[1]); 
+				mPortID 					= Smart_Decode(mPortIDList[0]);
+				mCarrierIDReport 			= Decode(reportList[2]);
+				mCarrierIDList 				= Decode(mCarrierIDReport[1]);	
+				mCarrierID					= Smart_Decode(mCarrierIDList[0]);
+				CID 						= mCarrierID;
+				//PortAssociationStateReport 	= Decode(reportList[3]);
+				//mPortAssociationState		= Decode(PortAssociationStateReport[3]);				
+				break;
+			return;
+		}
+				
+		if(SLOTMAPFAIL == 1 && byCEID == 106752)
+			S3_F17_CarrierActionRequest("CancelCarrier", mCarrierID, mPortID, mCAtt);
+		else if (byCEID == 114848){
+				mCJIDReport = Decode(reportList[1]); 
+				mCJIDList 	= Decode(mCJIDReport[1]); 
+				mCJID 		= Smart_Decode(mCJIDList[0]);
+				logn("mCJID: ", mCJID);
+			for(i=0; i < GetCount(INTRO); i=i+1){
+				logn(i, ": ", INTRO[i].cjid);
+				if(INTRO[i].cjid == mCJID){
+					wait(NewTimer(4));	//sleep for 1 sec
+					//S3_F17_CarrierOut(INTRO[i].carrierid, INTRO[i].portid);
+					break;
+				}
+			}		
+		}else{
+			if (DUMMYPORT == mPortID){
+				mCAtt = S2_L(S2_A("Usage"), S2_A("Dummy"));			
+			}else if(N2PURGE == 1 && PURGEMODE == 1){
+				mCAtt = S2_L(S2_L(S2_A("PurgeMode"), S2_U1(1)));
+				logn("Running with N2PURGE: ", mCAtt);
+				N2PURGE = 0;				
+			}	
+			
+			if(S3_F17_CarrierActionRequest("ProceedWithCarrier", mCarrierID, mPortID, mCAtt)){
+				if(byCEID == 106672 || byCEID == 106992){
+					INTRO[mPortID-1].state = "PWC1";
+				}else if(byCEID == 106848){
+					INTRO[mPortID-1].state = "PWC2";
+				}
+			}
+		}
 	}	
 }
 
 ResetMaterialInfo(ReportList){
 	local mMaterialOReport, mPortLocID, mPortCarrierID, mPortInfoList;
 	logn(">>>>>  ResetMaterialInfo  <<<<<");
-	mMaterialOReport 	= Decode(ReportList[1]);
-	mPortInfoList 		= Decode(mMaterialOReport[1]);
-	mPortLocID 			= S2_Decode(mPortInfoList[0]);
-	mPortCarrierID 		= S2_Decode(mPortInfoList[1]);
+	if(CUSRPT == 0){
+		mMaterialOReport 	= Decode(ReportList[1]);
+		mPortInfoList 		= Decode(mMaterialOReport[1]);
+		mPortLocID 			= S2_Decode(mPortInfoList[0]);
+		//logn("mPortLocID: ", mPortLocID);
+		mPortCarrierID 		= Smart_Decode(mPortInfoList[1]);
+		//logn("mPortCarrierID: ", mPortCarrierID);
 
-	if(INTRO[mPortLocID-1].State == "INTRO"){
-		INTRO[mPortLocID-1].State = "LOAD";
-		INTRO[mPortLocID-1].carrierid = mPortCarrierID;
-		S2_F49_LPLoadRequest_LP(mPortLocID);
+		//S3_F17_CarrierOut(mPortCarrierID, mPortLocID);
+		
+		if(INTRO[mPortLocID-1].state == "INTRO"){
+			INTRO[mPortLocID-1].state = "LOAD";
+			//INTRO[mPortLocID-1].carrierid = mPortCarrierID;
+			//S2_F49_LPLoad_Request(mPortLocID);
+		}			
 	}
 }
 
+VerifyAndUpdateCMSPortUsage(){
+	local mECIDsSetting, mS2F16_Reply;
+	logn(">>>>>  VerifyAndUpdateCMSPortUsage  <<<<<");	
+	// 17170467 : Port3Usage (ECID: CMSPortUsage3)
+	mECIDsSetting = NewList();
+	mECIDsSetting = InsertFirst(S2_L(S2_U4(17170467), S2_U1(4)), mECIDsSetting);
+
+	mS2F16_Reply = S2F15_Request(mECIDsSetting);	
+	S2F16_Parser(mS2F16_Reply);		
+}
+
+VerifyAndUpdateParameter2(){
+	local mECIDsSetting, mS2F16_Reply;
+	logn(">>>>>  VerifyAndUpdateParameter2  <<<<<");	
+	mECIDsSetting = NewList();
+	
+	mECIDsSetting = InsertFirst(S2_L(S2_U4(16777248), S2_B(0x01)), mECIDsSetting); 	// 16777248 : Initial Communication Status (ECID: InitCommState)
+	mECIDsSetting = InsertFirst(S2_L(S2_U4(16777280), S2_B(0x01)), mECIDsSetting);	// 16777280 : Initial Control Status (ECID: InitControlState)
+	mECIDsSetting = InsertFirst(S2_L(S2_U4(16777296), S2_B(0x01)), mECIDsSetting);	// 16777296 : Initial Offline Status (ECID: InitControlOfflineSubState)
+	//Keep it local for LP initialization occurs. Otherwise, it's not.
+	//mECIDsSetting = InsertFirst(S2_L(S2_U4(16777328), S2_B(0x01)), mECIDsSetting);	// 16777328 : Initial Online Status (ECID: InitControlOnlineSubState)
+	
+	mS2F16_Reply = S2F15_Request(mECIDsSetting);	
+	S2F16_Parser(mS2F16_Reply);		
+}
+
+VerifyAndUpdateDummySettings(){
+	local mECIDsSetting, mS2F16_Reply;
+	logn(">>>>>  VerifyAndUpdateDummySettings  <<<<<");	
+	// 17301584 : Default Dummy Max Uses (ECID: DefaultDummyMaxUses)
+	// 17301617 : Retain Dummy Wafer Type Names (ECID: RememberWaferType)
+	// 17301618 : Retain Cur Dummy Wafer Count (ECID: RememberCurrentDummyUses)
+	// 17301619 : Retain Max Dummy Wafer Uses (ECID: RememberMaxDummyUses) 
+	mECIDsSetting = NewList();
+	mECIDsSetting = InsertFirst(S2_L(S2_U4(17301617), S2_BOOLEAN(True)), mECIDsSetting);
+	mECIDsSetting = InsertFirst(S2_L(S2_U4(17301618), S2_BOOLEAN(True)), mECIDsSetting);
+	mECIDsSetting = InsertFirst(S2_L(S2_U4(17301619), S2_BOOLEAN(True)), mECIDsSetting);
+	mECIDsSetting = InsertFirst(S2_L(S2_U4(17301584), S2_U1(255)), mECIDsSetting);
+	
+	mS2F16_Reply = S2F15_Request(mECIDsSetting);	
+	S2F16_Parser(mS2F16_Reply);			
+}
+
 VerifyAndUpdateLeakCheckSettings(){
-	local i, mSecsEcIdList, mS2F14_Reply, mValues, mECIDsSetting;
+	local i, mSecsEcIdList, mS2F14_Reply, mValues, mECIDsSetting, mS2F16_Reply;
 	logn(">>>>>  VerifyAndUpdateLeakCheckSettings  <<<<<");
 	mSecsEcIdList = NewList (S2_U4(17635121), 
 						S2_U4(17635122), 
@@ -316,10 +977,10 @@ VerifyAndUpdateLeakCheckSettings(){
 						S2_U4(1763172), 
 						S2_U4(1763173));
 	mS2F14_Reply	= S2F13_Request(mSecsEcIdList);	
-	mValues			= S2F14_Parser(mS2F14_Reply);
+	mValues			= S2F14_Parser(mS2F14_Reply, mSecsEcIdList);
 	mECIDsSetting	= NewList();
 	for (i = 0; i < GetCount(mValues); i = i + 1){
-		if (mValues[i] > 10 ){
+		if (mValues[i] > 10){
 			mECIDsSetting = InsertFirst(S2_L(mSecsEcIdList[i], S2_U2(10)), mECIDsSetting);			
 		}
 	}	
@@ -330,20 +991,20 @@ VerifyAndUpdateLeakCheckSettings(){
 }
 
 GetLPAndCIDInfo(ReportList){
-	local mCarrierIDReport, mCarrierIDList, mCarrierID, mLocationIDReport, mLocationIDList, mLocationID;
-	logn(">>>>>  GetLPAndCIDInfo  <<<<<");
-	mCarrierIDReport	= Decode(ReportList[1]);
-	mCarrierIDList		= Decode(mCarrierIDReport[1]);
-	mCarrierID			= S2_Decode(mCarrierIDList[0]);	
-	mLocationIDReport	= Decode(ReportList[2]);
-	mLocationIDList		= Decode(mLocationIDReport[1]);
-	mLocationID			= S2_Decode(mLocationIDList[0]);	
-	switch(mLocationID){
-		case "LP1": INTRO[0].portid = 1; INTRO[0].carrierid	= mCarrierID; break;
-		case "LP2": INTRO[1].portid = 1; INTRO[1].carrierid	= mCarrierID; break;
-		case "LP3": INTRO[2].portid = 1; INTRO[2].carrierid	= mCarrierID; break;
-		case "LP4": INTRO[3].portid = 1; INTRO[3].carrierid	= mCarrierID; break;
-	}
+	// local mCarrierIDReport, mCarrierIDList, mCarrierID, mLocationIDReport, mLocationIDList, mLocationID;
+	// logn(">>>>>  GetLPAndCIDInfo  <<<<<");
+	// mCarrierIDReport	= Decode(ReportList[1]);
+	// mCarrierIDList		= Decode(mCarrierIDReport[1]);
+	// mCarrierID			= Smart_Decode(mCarrierIDList[0]);	
+	// mLocationIDReport	= Decode(ReportList[2]);
+	// mLocationIDList		= Decode(mLocationIDReport[1]);
+	// mLocationID			= S2_Decode(mLocationIDList[0]);	
+	// switch(mLocationID){
+		// case "LP1": INTRO[0].portid = 1; INTRO[0].carrierid	= mCarrierID; break;
+		// case "LP2": INTRO[1].portid = 1; INTRO[1].carrierid	= mCarrierID; break;
+		// case "LP3": INTRO[2].portid = 1; INTRO[2].carrierid	= mCarrierID; break;
+		// case "LP4": INTRO[3].portid = 1; INTRO[3].carrierid	= mCarrierID; break;
+	// }
 }
 
 ResetLoadPort(ReportList){
@@ -363,41 +1024,163 @@ VerifyChangedValues(ReportList){
 		mPortIDReport 	= Decode(ReportList[1]);
 		mPortIdList 	= Decode(mPortIDReport[1]);
 		mECID 			= S2_Decode(mPortIdList[0]);
-		ECChangeData 	= Decode(mPortIdList[1]);
-		mOldData 		= S2_Decode(ECChangeData[0]);	
-		mNewData 		= S2_Decode(ECChangeData[1]);
+		mECChangeData 	= Decode(mPortIdList[1]);
+		mOldData 		= S2_Decode(mECChangeData[0]);	
+		mNewData 		= S2_Decode(mECChangeData[1]);
 		logn("*****  ECID:", ToASCII(mECID), " value has changed from: ", ToASCII(mOldData), " -> ", ToASCII(mNewData));
 	}
 }
 
-SetLPAssociationInfo(ReportList){
-	local mPortIDReport, mPortIdList, mPortId, mCarrierIDReport, mCarrierIDList, mCarrierID;
-	logn(">>>>>  SetLPAssociationInfo  <<<<<");
-	mPortIDReport 	= Decode(ReportList[1]);
-	mPortIdList 	= Decode(mPortIDReport[1]);
-	mPortId 		= S2_Decode(mPortIdList[0]);
-
-	mCarrierIDReport = Decode(ReportList[2]);
-	mCarrierIDList 	 = Decode(mPortIDReport[1]);
-	mCarrierID 		 = S2_Decode(mPortIdList[0]);	
-	if(!mCarrierID){
-		mCarrierID = "1";
+HandleCarrierCloseed(ReportList){
+	local mMaterialOReport, mPortInfoList, mPortLocID, mPortCarrierID;
+	logn(">>>>>  HandleCarrierCloseed  <<<<<");
+	if(CUSRPT == 0){ //We only know how to handle for built-in report. Do not know how to handle for custom report
+		mMaterialOReport = Decode(ReportList[1]);
+		mPortInfoList 	 = Decode(mMaterialOReport[1]); 
+		mPortLocID		 = Smart_Decode(mPortInfoList[0]);	
+		mPortCarrierID	 = Smart_Decode(mPortInfoList[1]);	
+		S3_F17_CarrierOut(mPortCarrierID, mPortLocID);
+		INTRO[mPortLocID-1].State = "DONE";		
 	}
-	//logn("mPortId: ", mPortId);
-	INTRO[mPortID-1].portid 	= mPortID;
-	INTRO[mPortID-1].carrierid	= mCarrierID;
+}
+
+HandleCarrierLocked(ReportList){
+	local mMaterialOReport, mPortInfoList, mPortLocID, mPortCarrierID;
+	logn(">>>>>  HandleCarrierLocked  <<<<<");
+	mMaterialOReport = Decode(ReportList[1]);
+	mPortInfoList 	 = Decode(mMaterialOReport[1]); 
+	mPortLocID		 = Smart_Decode(mPortInfoList[0]);	
+	mPortCarrierID	 = Smart_Decode(mPortInfoList[1]);	
+	// if(mPortLocID == 1){
+		// _Run3PJsWithS16F15_LP1();
+	// }else if(mPortLocID == 2){
+		// _Run1PJWithS16F15_LP2();
+	// }if(mPortLocID == 3){
+		// _Run1PJWithS16F15_LP3();
+	// }
+}
+
+HandleCarrierDocked(ReportList){
+	local mMaterialOReport, mPortInfoList, mPortLocID, mPortCarrierID;
+	logn(">>>>>  HandleCarrierDocked  <<<<<");
+	mMaterialOReport = Decode(ReportList[1]);
+	mPortInfoList 	 = Decode(mMaterialOReport[1]); 
+	mPortLocID		 = Smart_Decode(mPortInfoList[0]);	
+	mPortCarrierID	 = Smart_Decode(mPortInfoList[1]);	
+	switch(mPortLocID){
+		case 1 : CID1_DOCKED = 1; break;
+		case 2 : CID2_DOCKED = 1; break;
+		case 3 : CID3_DOCKED = 1; break;
+		case 4 : CID4_DOCKED = 1; break;
+	}
+}
+
+HandleCarrierUnDocked(ReportList){
+	local mMaterialOReport, mPortInfoList, mPortLocID, mPortCarrierID;
+	logn(">>>>>  HandleCarrierUnDocked  <<<<<");
+	mMaterialOReport = Decode(ReportList[1]);
+	mPortInfoList 	 = Decode(mMaterialOReport[1]); 
+	mPortLocID		 = Smart_Decode(mPortInfoList[0]);	
+	mPortCarrierID	 = Smart_Decode(mPortInfoList[1]);	
+	switch(mPortLocID){
+		case 1 : CID1_DOCKED = 0; break;
+		case 2 : CID2_DOCKED = 0; break;
+		case 3 : CID3_DOCKED = 0; break;
+		case 4 : CID4_DOCKED = 0; break;
+	}
+}
+
+HandleMoveOut(ReportList){
+	local mMaterialOReport, mPortInfoList, mPortLocID, mPortCarrierID, mFound;
+	logn(">>>>>  HandleMoveOut  <<<<<");
+	if (CUSRPT == 0){
+		mMaterialOReport = Decode(ReportList[1]);
+		mPortInfoList 	 = Decode(mMaterialOReport[1]); 
+		mPortLocID		 = Smart_Decode(mPortInfoList[0]);	
+		//logn("mPortLocID: ", mPortLocID);
+		mPortCarrierID	 = Smart_Decode(mPortInfoList[1]);	
+		//logn("mPortCarrierID: ", mPortCarrierID);
+		//S3_F17_CarrierOut(mPortCarrierID, mPortLocID);
+		INTRO[mPortLocID-1].State = "DONE";
+		LPSTAT_STRUCT.portid = mPortLocID;
+		mFound = DictionaryLookup(LPSTAT_STRUCT, LPSTAT_DICT);
+		if(mFound){
+			mFound.done = mFound.done + 1;
+			DictionaryInsert (LPSTAT_STRUCT, LPSTAT_DICT);
+			logn("Port:", mPortLocID, " finished: ", mFound.done);
+		}		
+	}
+}
+
+HandleRecipeChange(ReportList, RecType){
+	local mRecChangeReport, mRecChangeData, mRecChangeStatus, mRecChangeName;
+	logn(">>>>>  HandleRecipeChange: ", RecType, "  <<<<<");
+	mRecChangeReport = Decode(ReportList[1]);
+	mRecChangeData 	= Decode(mRecChangeReport[1]);
+	mRecChangeStatus = Smart_Decode(mRecChangeData[0]);	
+	mRecChangeName 	= Smart_Decode(mRecChangeData[1]);
+	//logn("mRecChangeName: ", mRecChangeName, ", mRecChangeStatus: ", mRecChangeStatus);
+	if(mRecChangeStatus == 1){ //New Recipe Created
+		AddHostRecipe(mRecChangeName, RecType);
+	}else if(mRecChangeStatus == 3){ //Recipe Deleted
+		RemoveHostRecipe(mRecChangeName, RecType);
+	}
+}
+
+HandleLPAssociation(ReportList){
+	local mPortIDReport, mPortIdList, mPortId, mCarrierIDReport, mCarrierIDList, mCarrierID;
+	local mRecList, mSlotList;
+	logn(">>>>>  SetLPAssociationInfo  <<<<<");
+	if(CUSRPT == 0){
+		mPortIDReport 	= Decode(ReportList[1]);
+		mPortIdList 	= Decode(mPortIDReport[1]);
+		mPortId 		= Smart_Decode(mPortIdList[0]);
+
+		mCarrierIDReport = Decode(ReportList[2]);
+		mCarrierIDList 	 = Decode(mCarrierIDReport[1]);
+		mCarrierID 		 = Smart_Decode(mCarrierIDList[0]);	
+		
+		logn("mCarrierID: ", mCarrierID);
+		
+		if(!mCarrierID){
+			mCarrierID = "1";
+		}
+		logn("mPortId: ", mPortId);
+		// INTRO[mPortID-1].portid 	= mPortID;
+		// INTRO[mPortID-1].carrierid	= mCarrierID;
+		
+		if (CTRLREMOTE && REPEAT == 1){
+			if (mPortID == 1){
+				//_Run3PJsWithS16F15_LP1();	
+				//_Run_S16F15_Repeat3PJs_LP1();
+				_Run_S16F15_Repeat1PJ_LP1();
+			}else if (mPortID == 2){
+				//_Run1PJWithS16F15_LP2();	
+				_Run_S16F15_Repeat1PJ_LP2();
+			}else if (mPortID == 3){
+				//_Run1PJWithS16F15_LP3();
+				_Run_S16F15_Repeat1PJ_LP3();
+			}
+			//INTROREADY = 0;
+		}
+	}
 }
 
 SetCarrierID(ReportList){
-	local mCarrierID, mCarrierIDList, mCarrierIDReport; 
-	logn(">>>>>  SetCarrierID  <<<<<");
-	mCarrierIDReport = Decode(ReportList[1]);
-	mCarrierIDList 	 = Decode(mCarrierIDReport[1]);
-	mCarrierID 		 = Smart_Decode(mCarrierIDList[0]);
-	//logn("mCarrierID: ", mCarrierID);
-	if(mCarrierID){
-		INTRO[AtoI(mCarrierID)-1].carrierid = mCarrierID;
-	}
+	// local mCarrierID, mCarrierIDList, mCarrierIDReport; 
+	// logn(">>>>>  SetCarrierID  <<<<<");
+	// mCarrierIDReport = Decode(ReportList[1]);
+	// mCarrierIDList 	 = Decode(mCarrierIDReport[1]);
+	// mCarrierID 		 = Smart_Decode(mCarrierIDList[0]);
+	// logn("mCarrierID: ", mCarrierID);
+	// if(mCarrierID){
+		// if(IsString(mCarrierID))
+			// INTRO[0].carrierid = mCarrierID;
+		// else
+			// INTRO[AtoI(mCarrierID)-1].carrierid = mCarrierID;
+	// }
+	
+	// logn("INTRO[0].carrierid: ", INTRO[0].carrierid);
 }
 
 GetRCStatus(RCn, ReportList){
@@ -413,137 +1196,419 @@ GetRCStatus(RCn, ReportList){
 	mRCStateChangeReport 	= Decode(ReportList[3]);
 	mRCSCRCPPNList 			= Decode(mRCStateChangeReport[1]);
 	mRCStateChangeRCPPName 	= Smart_Decode(mRCSCRCPPNList[0]);
-	if(mPreviousRCState == 4 && mRCState == 6 ){
+	if(mPreviousRCState == 4 && mRCState == 6){
 		if (mRCStateChangeRCPPName == "RCReady"){
 			logn("*****************************************");
-			logn("******* RC", RCn, " SETUP IS COMPLETE NOW *******");
+			logn("*****  RC", RCn, " SETUP IS COMPLETE NOW");
 			logn("*****************************************");
 		}else{
-			logn("******* RC", RCn, " Finished Recipe: ", mRCStateChangeRCPPName);
+			logn("*****  RC", RCn, " Finished Recipe: ", mRCStateChangeRCPPName);
+		}
+		
+		switch(RCn){
+			case 1 : RC1_READY = 1; break;
+			case 2 : RC2_READY = 1; break;
+			case 3 : RC3_READY = 1; break;
+			case 4 : RC4_READY = 1; break;
 		}
 	}
 }
 
 AreChambersReady(){
-	local mS1F4_Reply, mValues;	
+	local i, mS1F4_Reply, mReady, mExist, mVids, mSystem, isRCReady;	
 	logn(">>>>>  Are Chambers Ready ???  <<<<<");	
-	RC1_READY = RC2_READY = RC3_READY = RC4_READY = RC5_READY = 0; 
 	
-	mS1F4_Reply	= S1F3_Request(NewList(S2_U4(33882769), S2_U4(33882770), S2_U4(33882771), S2_U4(33882772), S2_U4(33882773)));
-	mValues		= S1F4_Parser(mS1F4_Reply);
+	mVids = NewList(S2_U4(33554689), S2_U4(33554690), S2_U4(33554691), S2_U4(33554692), S2_U4(33554693));
+	mS1F4_Reply	= S1F3_Request(mVids);
+	mExist		= S1F4_Parser(mS1F4_Reply, mVids);
+	mVids = NewList();
 	
-	if(mValues[0] == 6){
-		RC1_READY = 1;
+	if(mExist[0] == 1){
+		mVids = InsertFirst(S2_U4(33882769), mVids);
 	}
-	if(mValues[1] == 6){
-		RC2_READY = 1;
+	if(mExist[1] == 1){
+		mVids = InsertFirst(S2_U4(33882770), mVids);
 	}
-	if(mValues[2] == 6){
-		RC3_READY = 1;
+	if(mExist[2] == 1){
+		mVids = InsertFirst(S2_U4(33882771), mVids);
 	}
-	if(mValues[3] == 6){
-		RC4_READY = 1;
+	if(mExist[3] == 1){
+		mVids = InsertFirst(S2_U4(33882772), mVids);
 	}
-	if(mValues[4] == 6){
-		RC5_READY = 1;
-	}	
+	if(mExist[4] == 1){
+		mVids = InsertFirst(S2_U4(33882773), mVids);
+	}
+		
+	mVids = InsertFirst(S2_U4(33882384), mVids);
 	
-	mS1F4_Reply	= S1F3_Request(NewList(S2_U4(33554689), S2_U4(33554690), S2_U4(33554691), S2_U4(33554692), S2_U4(33554693)));
-	mValues		= S1F4_Parser(mS1F4_Reply);
+	mS1F4_Reply	= S1F3_Request(mVids);
+	mReady		= S1F4_Parser(mS1F4_Reply, mVids);
 	
-	if(mValues[0] == 1){
-		logn("RC1_READY: ", RC1_READY);
+	mSystem = 0;
+	if(mReady[0] == 1){
+		mSystem = 1;
 	}
-	if(mValues[1] == 1){
-		logn("RC2_READY: ", RC2_READY);
+	isRCReady = 1;
+	for(i = 1;i < GetCount(mReady);i = i + 1){
+		if (mReady[i] != 33){
+			isRCReady = 0;
+			break;
+		}
 	}
-	if(mValues[2] == 1){
-		logn("RC3_READY: ", RC3_READY);
-	}
-	if(mValues[3] == 1){
-		logn("RC4_READY: ", RC4_READY);
-	}
-	if(mValues[4] == 1){
-		logn("RC5_READY: ", RC5_READY);
-	}	
-	
-	if(RC1_READY || RC2_READY || RC3_READY || RC4_READY || RC5_READY){
+	logn("SYSTEM: ", mSystem, " RCREADY: ", isRCReady);
+	//if(isRCReady && mSystem){
+	if(mSystem){
 		logn("*****************************************************");
 		logn("****** TOOL IS READY FOR LOT INTRODUCTION NOW *******");
 		logn("*****************************************************");		
+		TOOL_READY = 1;
+		_SynchronizeTimeWithHost();
+	
+		if(DUMMYPORT == 0){
+			mVids = NewList(S2_U4(17170465), S2_U4(17170466), S2_U4(17170467), S2_U4(17170468));
+			mS1F4_Reply	= S1F3_Request(mVids);
+			mValues		= S1F4_Parser(mS1F4_Reply, mVids);
+			if(mValues[0] == 4){
+				DUMMYPORT = 1;
+				logn("DUMMYPORT: LP1");
+			}else if(mValues[1] == 4){
+				DUMMYPORT = 2;
+				logn("DUMMYPORT: LP2");
+			}else if(mValues[2] == 4){
+				DUMMYPORT = 3;
+				logn("DUMMYPORT: LP3");
+			}else if(mValues[3] == 4){
+				DUMMYPORT = 4;
+				logn("DUMMYPORT: LP4");
+			}else{
+				DUMMYPORT = -1;
+				logn("DUMMYPORT: Not Any Port");				
+			}			
+		}
+		return(1);
 	}else{
 		logn("********************************************************");
 		logn("****** TOOL IS NOT READY FOR LOT INTRODUCTION YET ******");
-		logn("********************************************************");			
+		logn("********************************************************");	
+		return(0);
 	}
 }
 
-public GetProcessState(ReportList){	
-	local mPreviousProcessStateReport, mPreviousProcessState, mPPSList, mProcessStateReport, mProcessState, mPSList;	
+GetProcessState(ReportList){	
+	local mPreviousProcessStateReport, mPreviousProcessState, mPPSList, mProcessStateReport;
+	local mPSList, mValues, mCjobAvailableSpace, mVid;	
 	logn(">>>>>  GetProcessState  <<<<<");	
 	mPreviousProcessStateReport = Decode(ReportList[1]);
 	mPPSList 					= Decode(mPreviousProcessStateReport[1]);
 	mPreviousProcessState 		= S2_Decode(mPPSList[0]);
 	mProcessStateReport 		= Decode(ReportList[2]);
 	mPSList 					= Decode(mProcessStateReport[1]);
-	mProcessState 				= S2_Decode(mPSList[0]);
+	PROCESSSTATE 				= S2_Decode(mPSList[0]);
 	
-	if(mPreviousProcessState == 0 && mProcessState == 1){
+	if(mPreviousProcessState == 0 && PROCESSSTATE == 1){
+		TOOL_READY = 1;
 		logn("*****************************************************");
 		logn("******  SETUP IS COMPLETE. TOOL IS READY NOW  *******");
-		logn("*****************************************************");		
-	}else if(mPreviousProcessState == 2 && mProcessState == 1){
+		logn("*****************************************************");
+		mVid = S2_U4(34078784);
+		mValues = S1F4_Parser(S1F3_Request(mVid), NewList(mVid)); //CjobAvailableSpace
+		mCjobAvailableSpace = mValues[0];	
+		logn("mCjobAvailableSpace: ", mCjobAvailableSpace);
+		// if (mCjobAvailableSpace == 112){
+			// _Run3PJsWithS16F15_LP1();
+			// _Run1PJWithS16F15_LP2();
+		// }
+		// PROCESSSTATE = GetVIDState("33882384", PROCESSSTATE);
+		// logn("PROCESSSTATE: ", PROCESSSTATE[1]);
+		
+	}else if(mPreviousProcessState == 2 && PROCESSSTATE == 0){
 		logn("******************************************************");
-		logn("******  PROCESSING COMPLETED. TOOL IS IDLE NOW *******");
+		logn("******  PROCESSING COMPLETED. TOOL IS IDLE NOW  ******");
 		logn("******************************************************");		
 	}
 }
 
 VerifyControlState(ControlState){
-	local mStatus;
-	CTRLREMOTE = 0;
+	local mStatus, mVid;
 	switch(ControlState){
-		case 1: mStatus = "************  OFFLINE/Equipment OffLine  ************"; 
+		case 1: mStatus = "************  OFFLINE/Equipment OffLine"; 
+				ONLINE = 0;
 				INITIALIZE = 0;
 				//S1_F17_RequestToolOnline();
 				//wait();
 				break;							
-		case 2: mStatus = "**************  OFFLINE/Attempt-ONLINE  *************"; break;
-		case 3: mStatus = "***************  OFFLINE/Host-OFFLINE  **************"; break;
-		case 4: mStatus = "*******************  ONLINE/LOCAL  ******************"; 
+		case 2: mStatus = "**************  OFFLINE/Attempt-ONLINE"; 
+				ONLINE = 0;
+				break;
+		case 3: mStatus = "***************  OFFLINE/Host-OFFLINE"; 
+				ONLINE = 0;
+				break;
+		case 4: mStatus = "*******************  ONLINE/LOCAL"; 
+				ONLINE = 1;
 				INITIALIZE = 0;
-				// S1_F67_RequestToolOnlineRemote(); 
-				// wait();
+				// if (!LP1_CID && !LP2_CID && !LP3_CID && !LP4_CID){
+					// CarrierLocationInfo();			
+				//}	
+				if(UPDATERECDIR == 0 || STARTUP == 1){ 
+					S1_F67_RequestToolOnlineRemote(); //might happen just once at STARTUP
+					if (STARTUP == 1){
+						STARTUP = 0;
+					}
+				}					
+				
+				wait();
 				break;
-		case 5: mStatus = "******************  ONLINE/REMOTE  ******************"; 
-				VerifyAndUpdateLeakCheckSettings();
-				CTRLREMOTE = 1;
-				S5_F3_EnableAllAlarms();
-				wait( NewTimer( 1 ) );	//sleep for 1 sec
-				S2_F37_EnableAllEvents();
-				wait( NewTimer( 1 ) );	//sleep for 1 sec
-				mValues = S1F4_Parser(S1F3_Request(S2_U4(33890960)));
-				TOTALPORT = mValues[0];		
-				if(GetCount(INTRO) < 1){
-					Initialize_Intro();
+		case 5: mStatus = "******************  ONLINE/REMOTE"; 
+				ONLINE = 1;
+				if (!LP1_CID && !LP2_CID && !LP3_CID && !LP4_CID){
+					_CarrierLocationInfo();			
+				}				
+				if(TOOLTYPE == "SYN"){
+					VerifyAndUpdateDummySettings();	
+					if (AtoI(Substring(SOFTREV, 0, 4)) > 430){
+						VerifyAndUpdateCMSPortUsage();
+						//VerifyAndUpdateParameter2();
+						VerifyAndUpdateLeakCheckSettings();
+					}				
+				}else{
+					//VerifyAndUpdateParameter2();
+					VerifyAndUpdateLeakCheckSettings();
 				}
+				mVid = S2_U4(33890960);
+				mValues = S1F4_Parser(S1F3_Request(mVid), NewList(mVid));
+				TOTALPORT = mValues[0];		
+				//DefaultEventSubscription();
 				break;
-		default: mStatus = "******************  UNKNOWN STATE  ******************"; break;							
+		default: mStatus = "******************  UNKNOWN STATE"; break;							
 	}	
 	return(mStatus);
 }
-						
-DoYouWantToRunALot(){
-	local mStatus;
-	logn("Thinh -> DoYouWantToRunALot" );	
-	mStatus = GuiMsgBox ("Run A Lot Confirmation!", "Click OK if you want to run a Lot. Click CANCEL if not", 1);
-	
-	if(mStatus == 1){
-		RunLotAtLP1();
-	}else{
-		logn("Terminated per user's request");
-	}		
+
+public _SubsribeSpecificEventsFor_Mecca(){
+	local mReply, mRequest;
+	CUSRPT = 1;	
+	logn(">>>>>> Mecca_SpecificEventSubscription <<<<<<<");
+	wait(NewTimer(1));	//sleep for 1 sec	
+	S2_F37_DisableAllEvents();
+	wait(NewTimer(1));	//sleep for 1 sec	
+	S2_F35_DisassociateAllEventsReports();
+	// wait(NewTimer(1));	//sleep for 1 sec	
+	// S2_F33_DeleteAllExistingReports();	
+	wait(NewTimer(1));	//sleep for 1 sec
+	S5_F3_EnableAllAlarms();	
+	// wait(NewTimer(1));	//sleep for 1 sec
+	// S2_F33_DeleteAllExistingReports();
+	wait(NewTimer(1));	//sleep for 1 sec
+	S2_F37_DisableAllEvents();
+	wait(NewTimer(1));	//sleep for 1 sec
+	mRequest = SendPrimary(Polygon_S2F33, TARGET); //Define to Reports	
+	S2F33_Parser(mRequest);
+	mReply = wait(mRequest);	
+	wait(NewTimer(1));	//sleep for 1 sec	
+	S2F34_Parser(mReply);	
+	wait(NewTimer(1));	//sleep for 1 sec	
+	mRequest = SendPrimary(Polygon_S2F35, TARGET); //Link Reports to Events
+	S2F35_Parser(mRequest);
+	wait(NewTimer(1));	//sleep for 1 sec		
+	mReply = wait(mRequest);	
+	S2F36_Parser(mReply);		
+	wait(NewTimer(1));	//sleep for 1 sec
+	S2_F37_EnableAllEvents();
+	//wait(SendPrimary(Enable_All_Events, TARGET));	//Enable All Available Events	
+	// wait(NewTimer(1));	//sleep for 1 sec
+	// wait(SendPrimary(Polygon_S2F37, TARGET));	//Enable Specific Events		
 }
+
+public _SubsribeSpecificEventsFor_TSMC(){
+	logn(">>>>>> TSMC_SpecificEventSubscription <<<<<<<");
+	CUSRPT = 1;	
+	wait (SendPrimary(TSMC1_S2F37, TARGET));
+	wait(NewTimer(1));	//sleep for 1 sec
+	wait (SendPrimary(TSMC2_S2F35, TARGET));
+	wait(NewTimer(1));	//sleep for 1 sec
+	wait (SendPrimary(TSMC3_S2F33, TARGET));
+	wait(NewTimer(1));	//sleep for 1 sec
+	wait (SendPrimary(TSMC4_S2F33, TARGET));
+	wait(NewTimer(1));	//sleep for 1 sec
+	wait (SendPrimary(TSMC5_S2F35, TARGET));
+	wait(NewTimer(1));	//sleep for 1 sec
+	wait (SendPrimary(TSMC6_S2F37, TARGET));
+	wait(NewTimer(1));	//sleep for 1 sec
+}
+
+public _SubsribeSpecificEventsFor_GF(){
+	local mReply, mRequest;
+	logn(">>>>>> GF_SpecificEventSubscription <<<<<<<");
+	CUSRPT = 1;	
+	wait(NewTimer(1));	//sleep for 1 sec
+	//S2_F37_EnableAllEvents();	
+	mRequest = SendPrimary(GF1_Disable_All_Reports, TARGET);
+	//logn("mRequest: ", mRequest.text);
+	mReply = wait(mRequest);
+	S2F36_Parser(mReply);
+	wait(NewTimer(1));	//sleep for 1 sec
+	mRequest = SendPrimary(GF2_Delete_All_Reports, TARGET);
+	//logn("mRequest: ", mRequest);
+	S2F33_Parser(mRequest);
+	mReply = wait(mRequest);	
+	S2F34_Parser(mReply);
+	wait(NewTimer(1));	//sleep for 1 sec
+	mRequest = SendPrimary(GF3_Disable_All_Events, TARGET);
+	//logn("mRequest: ", mRequest);
+	S2F37_Parser(mRequest);
+	mReply = wait(mRequest);	
+	S2F38_Parser(mReply);
+	wait(NewTimer(1));	//sleep for 1 sec
+	mRequest = SendPrimary(GF4_DisAssociate_Events, TARGET);
+	//logn("mRequest: ", mRequest);
+	mReply = wait(mRequest);	
+	S2F36_Parser(mReply);
+	wait(NewTimer(1));	//sleep for 1 sec
+	mRequest = SendPrimary(GF5_Define_All_Reports, TARGET);
+	//logn("mRequest: ", mRequest);
+	S2F33_Parser(mRequest);
+	mReply = wait(mRequest);	
+	wait(NewTimer(1));	//sleep for 1 sec		
+	S2F34_Parser(mReply);
+	wait(NewTimer(1));	//sleep for 1 sec
+	mRequest = SendPrimary(GF6_Link_Events_Reports, TARGET);
+	//logn("mRequest: ", mRequest);
+	S2F35_Parser(mRequest);
+	mReply = wait(mRequest);	
+	wait(NewTimer(1));	//sleep for 1 sec		
+	S2F36_Parser(mReply);	
+	wait(NewTimer(1));	//sleep for 1 sec	
+	mRequest = SendPrimary(GF7_Enable_All_Events, TARGET);
+	//logn("mRequest: ", mRequest);
+	S2F37_Parser(mRequest);
+	mReply = wait(mRequest);	
+	S2F38_Parser(mReply);
+	wait(NewTimer(1));	//sleep for 1 sec
+	S5_F3_EnableAllAlarms();	
+}
+
+public _SubsribeSpecificEventsFor_Intel(){
+	local mReply, mRequest;
+	logn(">>>>>> Intel_SpecificEventSubscription <<<<<<<");
+	CUSRPT = 1;	
+//Pre work	
+	S5_F3_DisableAllAlarms();
+
+	wait(NewTimer(1));	//sleep for 1 sec
+	//mRequest = SendPrimary(Intel1_Delete_All_Reports, TARGET);
+	mRequest = SendPrimary(Intel1_Delete_PMScriptReports, TARGET);
+	//logn("mRequest: ", mRequest.text);
+	S2F33_Parser(mRequest);
+	mReply = wait(mRequest);
+	wait(NewTimer(1));	//sleep for 1 sec
+	S2F34_Parser(mReply);
+	
+	wait(NewTimer(1));	//sleep for 1 sec
+	//mRequest = SendPrimary(Intel2_Disable_All_Events, TARGET);
+	mRequest = SendPrimary(Intel2_Disable_PMScriptEvents, TARGET);
+	//logn("mRequest: ", mRequest);
+	//S2F37_Parser(mRequest);
+	mReply = wait(mRequest);
+	wait(NewTimer(1));	//sleep for 1 sec
+	S2F38_Parser(mReply);	
+//Main work	
+	wait(NewTimer(1));	//sleep for 1 sec
+	//mRequest = SendPrimary(Intel3_Define_Reports, TARGET);
+	mRequest = SendPrimary(Intel3_Define_PMScriptReports, TARGET);
+	//logn("mRequest: ", mRequest);
+	S2F33_Parser(mRequest);
+	mReply = wait(mRequest);	
+	wait(NewTimer(1));	//sleep for 1 sec		
+	S2F34_Parser(mReply);
+	
+	wait(NewTimer(1));	//sleep for 1 sec
+	//mRequest = SendPrimary(Intel4_Link_Events, TARGET);
+	mRequest = SendPrimary(Intel4_Link_PMScriptEvents, TARGET);
+	//logn("mRequest: ", mRequest);
+	S2F35_Parser(mRequest);
+	mReply = wait(mRequest);		
+	wait(NewTimer(1));	//sleep for 1 sec		
+	S2F36_Parser(mReply);	
+	
+	wait(NewTimer(1));	//sleep for 1 sec	
+	//mRequest = SendPrimary(Intel5_Enable_Events, TARGET);
+	//mRequest = SendPrimary(Intel5_Enable_PMScriptEvents, TARGET);
+S2_F37_EnableAllEvents();	
+	//logn("mRequest: ", mRequest);
+	//S2F37_Parser(mRequest);
+	mReply = wait(mRequest);
+	wait(NewTimer(1));	//sleep for 1 sec	
+	S2F38_Parser(mReply);
+//Post work	
+	wait(NewTimer(1));	//sleep for 1 sec
+	S5_F3_EnableAllAlarms();	
+	// S3_F27_ChangeToAutoMode_3LP();
+}
+
+DefaultEventSubscription(){
+	logn(">>>>>> DefaultEventSubscription <<<<<<<");
+	CUSRPT = 0;	
+	wait(NewTimer(1));	//sleep for 1 sec
+	// S2_F37_EnableAllEvents();	
+	// wait(NewTimer(1));	//sleep for 1 sec	
+	// S2_F33_DeleteAllExistingReports();
+	// wait(NewTimer(1));	//sleep for 1 sec	
+	// S2_F35_DisassociateAllEventsReports();
+	// wait(NewTimer(1));	//sleep for 1 sec	
+	// S2_F37_DisableAllEvents();	
+	wait(NewTimer(1));	//sleep for 1 sec
+	S5_F3_EnableAllAlarms();
+	wait(NewTimer(1));	//sleep for 1 sec
+	S2_F37_EnableAllEvents();
+	wait(NewTimer(1));	//sleep for 1 sec
+	BASIC = 0;
+}
+
+public _SubsribeSpecificEventsFor_SMIC(){
+	logn(">>>>>> SubsribeSpecificEventsFor_SMIC <<<<<<<");
+	
+	mRequest = SendPrimary(SMIC0_Unlink_PPChangeEvent, TARGET);
+	S2F35_Parser(mRequest);
+	mReply = wait(mRequest);		
+	wait(NewTimer(1));	//sleep for 1 sec		
+	S2F36_Parser(mReply);	
+	
+	mRequest = SendPrimary(SMIC1_Delete_PPChangeReport, TARGET);
+	S2F33_Parser(mRequest);
+	mReply = wait(mRequest);
+	wait(NewTimer(1));	//sleep for 1 sec
+	S2F34_Parser(mReply);
+	
+	wait(NewTimer(1));	//sleep for 1 sec
+	mRequest = SendPrimary(SMIC2_Disable_PPChangeEvent, TARGET);
+	S2F37_Parser(mRequest);
+	mReply = wait(mRequest);
+	wait(NewTimer(1));	//sleep for 1 sec
+	S2F38_Parser(mReply);	
+	
+//Main work	
+	wait(NewTimer(1));	//sleep for 1 sec
+	mRequest = SendPrimary(SMIC3_Define_PPChangeReport, TARGET);
+	S2F33_Parser(mRequest);
+	mReply = wait(mRequest);	
+	wait(NewTimer(1));	//sleep for 1 sec		
+	S2F34_Parser(mReply);
+	
+	wait(NewTimer(1));	//sleep for 1 sec
+	mRequest = SendPrimary(SMIC4_Link_PChangeEvent, TARGET);
+	S2F35_Parser(mRequest);
+	mReply = wait(mRequest);		
+	wait(NewTimer(1));	//sleep for 1 sec		
+	S2F36_Parser(mReply);	
+	
+	wait(NewTimer(1));	//sleep for 1 sec	
+	mRequest = SendPrimary(SMIC5_Enable_PChangeEvent, TARGET);
+	S2F37_Parser(mRequest);
+	mReply = wait(mRequest);
+	wait(NewTimer(1));	//sleep for 1 sec	
+	S2F38_Parser(mReply);	
+}
+
 /////////////////////////////////////////////////////////////////
 /*
 	This funct is to create specific report
@@ -562,7 +1627,7 @@ Create_E30_GeneralControlStateReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID952, VID36, VID40, VID28, VID959, VID960;
 	
-	logn("Thinh -> Create_E30_GeneralControlStateReport()" );
+	logn("Thinh -> Create_E30_GeneralControlStateReport()");
 	
 	VID952 	= S2_U1(1);
 	VID36	= S2_U1(1);
@@ -588,7 +1653,7 @@ Create_E30_GeneralControlStateReport(myCEID, myIndex)
 		
     Send_S6F11(myCEID, NewList(VID952, VID36, VID40, VID28, VID959, VID960));
 	
-	logn("Thinh <- Create_E30_GeneralControlStateReport()" );
+	logn("Thinh <- Create_E30_GeneralControlStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -607,7 +1672,7 @@ Create_E30_ProcessProgramChangeReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID961, VID953, VID965, VID967;
 	
-	logn("Thinh -> Create_E30_ProcessProgramChangeReport()" );
+	logn("Thinh -> Create_E30_ProcessProgramChangeReport()");
 	
 	VID961 	= S2_U1(1);
 	VID953	= S2_U1(1);
@@ -631,7 +1696,7 @@ Create_E30_ProcessProgramChangeReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID961, VID953, VID965, VID967));
 	
-	logn("Thinh <- Create_E30_ProcessProgramChangeReport()" );
+	logn("Thinh <- Create_E30_ProcessProgramChangeReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -648,7 +1713,7 @@ Create_E30_EquipmentConstantChangeReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID604, VID605, VID606;
 	
-	logn("Thinh -> Create_E30_EquipmentConstantChangeReport()" );
+	logn("Thinh -> Create_E30_EquipmentConstantChangeReport()");
 	
 	VID604 = S2_U1(1);
 	VID605 = S2_A("");
@@ -665,7 +1730,7 @@ Create_E30_EquipmentConstantChangeReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID604, VID605, VID606));
 	
-	logn("Thinh <- Create_E30_EquipmentConstantChangeReport()" );
+	logn("Thinh <- Create_E30_EquipmentConstantChangeReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -681,7 +1746,7 @@ Create_E30_RemoteCommandReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID22, VID35;
 	
-	logn("Thinh -> Create_E30_RemoteCommandReport()" );
+	logn("Thinh -> Create_E30_RemoteCommandReport()");
 	
 	VID22 = S2_U1(1);
 	VID35 = S2_U1(1);
@@ -696,7 +1761,7 @@ Create_E30_RemoteCommandReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID22, VID35));
 	
-	logn("Thinh <- Create_E30_RemoteCommandReport()" );
+	logn("Thinh <- Create_E30_RemoteCommandReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -712,7 +1777,7 @@ Create_E30_MaterialReceivedReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID1500, VID1680;
 
-	logn("Thinh -> Create_E30_MaterialReceivedReport()" );
+	logn("Thinh -> Create_E30_MaterialReceivedReport()");
 	
 	VID1500 = S2_U1(INTRO[myIndex].portid); 
 	VID1680 = S2_A(INTRO[myIndex].lotid);
@@ -728,7 +1793,7 @@ Create_E30_MaterialReceivedReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID1500, VID1680));
 	
-	logn("Thinh <- Create_E30_MaterialReceivedReport()" );
+	logn("Thinh <- Create_E30_MaterialReceivedReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -745,16 +1810,16 @@ Create_E30_SpecificControlStateReport(myCEID, myIndex, mySlotID)
 {
 	local myReportID, myEvent, mySubStrateID, VID1500, VID2680, VID1683;
 	
-	logn("Thinh -> Create_E30_SpecificControlStateReport()" );
+	logn("Thinh -> Create_E30_SpecificControlStateReport()");
 	
     if (mySlotID > 0 && mySlotID <26)
     {
-        if ( mySlotID < 10)
+        if (mySlotID < 10)
             mySubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(mySlotID));
         else
             mySubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(mySlotID));  
                 
-        logn("Thinh - mySubStrateID = ", mySubStrateID );           
+        logn("Thinh - mySubStrateID = ", mySubStrateID);           
     }
 
 	VID1500 = S2_U1(INTRO[myIndex].portid);
@@ -795,7 +1860,7 @@ Create_E30_SpecificControlStateReport(myCEID, myIndex, mySlotID)
 
 	Send_S6F11(myCEID, NewList(VID1500, VID2680, VID1683));
 	
-	logn("Thinh <- Create_E30_SpecificControlStateReport()" );
+	logn("Thinh <- Create_E30_SpecificControlStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -812,7 +1877,7 @@ Create_E30_EquipmentProcessStateReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID34, VID955, VID954;
 	
-	logn("Thinh -> Create_E30_EquipmentProcessStateReport()" );
+	logn("Thinh -> Create_E30_EquipmentProcessStateReport()");
 	
 	VID34	= S2_U1(1);
 	VID955	= S2_U1(1);
@@ -889,7 +1954,7 @@ Create_E30_EquipmentProcessStateReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID34, VID955, VID954));
 	
-	logn("Thinh <- Create_E30_EquipmentProcessStateReport()" );
+	logn("Thinh <- Create_E30_EquipmentProcessStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -907,7 +1972,7 @@ Create_E87_GenProcessingStatusReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID2300540100, VID2300540200, VID2300550100, VID2300550200;
 	
-	logn("Thinh -> Create_E87_GenProcessingStatusReport()" );
+	logn("Thinh -> Create_E87_GenProcessingStatusReport()");
 	
 	VID2300540100 = S2_U1(1);
 	VID2300540200 = S2_U1(1);
@@ -928,7 +1993,7 @@ Create_E87_GenProcessingStatusReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID2300540100, VID2300540200, VID2300550100, VID2300550200));
 	
-	logn("Thinh <- Create_E87_GenProcessingStatusReport()" );
+	logn("Thinh <- Create_E87_GenProcessingStatusReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -946,10 +2011,10 @@ Create_E87_FOUPA_WaferStartReport(myCEID, myIndex, mySlotID)
 {
 	local myReportID, myEvent, VID2300620100, VID2300630100, VID2300640100, VID2300650100;
 	
-	logn("Thinh -> Create_E87_FOUPA_WaferStartReport()" );
+	logn("Thinh -> Create_E87_FOUPA_WaferStartReport()");
 
 	VID2300620100 = S2_A(INTRO[myIndex].pjid);
-	VID2300630100 = S2_A(INTRO[myIndex].recipe);
+	VID2300630100 = S2_A(INTRO[myIndex].recipes);
 	VID2300640100 = S2_U4(INTRO[myIndex].portid);
 	VID2300650100 = S2_U4(mySlotID);
 	
@@ -964,7 +2029,7 @@ Create_E87_FOUPA_WaferStartReport(myCEID, myIndex, mySlotID)
 
 	Send_S6F11(myCEID, NewList(VID2300620100, VID2300630100, VID2300640100, VID2300650100));
 	
-	logn("Thinh <- Create_E87_FOUPA_WaferStartReport()" );
+	logn("Thinh <- Create_E87_FOUPA_WaferStartReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -982,10 +2047,10 @@ Create_E87_FOUPA_WaferCompleteReport(myCEID, myIndex, mySlotID)
 {
 	local myReportID, myEvent, VID2300660100, VID2300670100, VID2300680100, VID2300690100;
 	
-	logn("Thinh -> Create_E87_FOUPA_WaferCompleteReport()" );
+	logn("Thinh -> Create_E87_FOUPA_WaferCompleteReport()");
 
 	VID2300660100 = S2_A(INTRO[myIndex].pjid);
-	VID2300670100 = S2_A(INTRO[myIndex].recipe);
+	VID2300670100 = S2_A(INTRO[myIndex].recipes);
 	VID2300680100 = S2_U4(INTRO[myIndex].portid);
 	VID2300690100 = S2_U4(mySlotID);
 		
@@ -1000,7 +2065,7 @@ Create_E87_FOUPA_WaferCompleteReport(myCEID, myIndex, mySlotID)
 	
 	Send_S6F11(myCEID, NewList(VID2300660100, VID2300670100, VID2300680100, VID2300690100));
 	
-	logn("Thinh <- Create_E87_FOUPA_WaferCompleteReport()" );
+	logn("Thinh <- Create_E87_FOUPA_WaferCompleteReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1018,10 +2083,10 @@ Create_E87_FOUPB_WaferStartReport(myCEID, myIndex, mySlotID)
 {
 	local myReportID, myEvent, VID2300620200, VID2300630200, VID2300640200, VID2300650200;
 	
-	logn("Thinh -> Create_E87_FOUPB_WaferStartReport()" );
+	logn("Thinh -> Create_E87_FOUPB_WaferStartReport()");
 
 	VID2300620200 = S2_A(INTRO[myIndex].pjid);
-	VID2300630200 = S2_A(INTRO[myIndex].recipe);
+	VID2300630200 = S2_A(INTRO[myIndex].recipes);
 	VID2300640200 = S2_U4(INTRO[myIndex].portid);
 	VID2300650200 = S2_U4(mySlotID);
 	
@@ -1036,7 +2101,7 @@ Create_E87_FOUPB_WaferStartReport(myCEID, myIndex, mySlotID)
 
 	Send_S6F11(myCEID, NewList(VID2300620200, VID2300630200, VID2300640200, VID2300650200));
 	
-	logn("Thinh <- Create_E87_FOUPB_WaferStartReport()" );
+	logn("Thinh <- Create_E87_FOUPB_WaferStartReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1054,10 +2119,10 @@ Create_E87_FOUPB_WaferCompleteReport(myCEID, myIndex, mySlotID)
 {
 	local myReportID, myEvent, VID2300660200, VID2300670200, VID2300680200, VID2300690200;
 	
-	logn("Thinh -> Create_E87_FOUPB_WaferCompleteReport()" );
+	logn("Thinh -> Create_E87_FOUPB_WaferCompleteReport()");
 
 	VID2300660200 = S2_A(INTRO[myIndex].pjid);
-	VID2300670200 = S2_A(INTRO[myIndex].recipe);
+	VID2300670200 = S2_A(INTRO[myIndex].recipes);
 	VID2300680200 = S2_U4(INTRO[myIndex].portid);
 	VID2300690200 = S2_U4(mySlotID);
 	
@@ -1072,7 +2137,7 @@ Create_E87_FOUPB_WaferCompleteReport(myCEID, myIndex, mySlotID)
 
 	Send_S6F11(myCEID, NewList(VID2300660200, VID2300670200, VID2300680200, VID2300690200));
 	
-	logn("Thinh <- Create_E87_FOUPB_WaferCompleteReport()" );
+	logn("Thinh <- Create_E87_FOUPB_WaferCompleteReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1089,7 +2154,7 @@ Create_E87_CarrierLocationChangeReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID1550, VID1570, VID1589;
 	
-	logn("Thinh -> Create_E87_CarrierLocationChangeReport()" );
+	logn("Thinh -> Create_E87_CarrierLocationChangeReport()");
 	
 	VID1550 = S2_U1(1);
 	VID1570 = S2_U1(1);
@@ -1106,7 +2171,7 @@ Create_E87_CarrierLocationChangeReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID1550, VID1570, VID1589));
 	
-	logn("Thinh <- Create_E87_CarrierLocationChangeReport()" );
+	logn("Thinh <- Create_E87_CarrierLocationChangeReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1124,7 +2189,7 @@ Create_E87_PortReservationStateReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID1500, VID1700, VID1701, VID1704;
 	
-	logn("Thinh -> Create_E87_PortReservationStateReport()" );
+	logn("Thinh -> Create_E87_PortReservationStateReport()");
 
 	VID1500 = S2_U1(1);
 	VID1700 = S2_U1(1);
@@ -1148,7 +2213,7 @@ Create_E87_PortReservationStateReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID1500, VID1700, VID1701, VID1704));
 	
-	logn("Thinh <- Create_E87_PortReservationStateReport()" );
+	logn("Thinh <- Create_E87_PortReservationStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1167,13 +2232,13 @@ Create_E87_PortAssociationStateReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID1500, VID1520, VID1521, VID1524, VID1540;
 	
-	logn("Thinh -> Create_E87_PortAssociationStateReport()" );
+	logn("Thinh -> Create_E87_PortAssociationStateReport()");
 
 	VID1500 = S2_U1(INTRO[myIndex].portid);	
 	VID1520 = S2_U1(1);
 	VID1521 = S2_U1(1);
 	VID1524 = S2_U1(0);
-	VID1540 = S2_L(NewList ( <U1 1>,<U1 1> ));
+	VID1540 = S2_L(NewList (<U1 1>,<U1 1>));
 	
 	switch(myCEID)
 	{
@@ -1187,7 +2252,7 @@ Create_E87_PortAssociationStateReport(myCEID, myIndex)
 			logn("Thinh - CEID_3090201_AssociatedToNotAssociated");	
 			VID1520 = S2_U1(1);
 			VID1521 = S2_U1(1);
-			VID1540 = S2_L(NewList ( <U1 0>,<U1 2> ));			
+			VID1540 = S2_L(NewList (<U1 0>,<U1 2>));			
 			break;	
 		case 3090202:
 			logn("Thinh - CEID_3090202_AssociatedToAssociated");	
@@ -1198,7 +2263,7 @@ Create_E87_PortAssociationStateReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID1500, VID1520, VID1521, VID1524, VID1540));
 	
-	logn("Thinh <- Create_E87_PortAssociationStateReport()" );
+	logn("Thinh <- Create_E87_PortAssociationStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1217,7 +2282,7 @@ Create_E87_PortTransferStateReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID1500, VID1530;
 	
-	logn("Thinh -> Create_E87_PortTransferStateReport()" );
+	logn("Thinh -> Create_E87_PortTransferStateReport()");
 
 	VID1500 = S2_U1(INTRO[myIndex].portid);	
 	VID1530 = S2_U1(1);
@@ -1271,7 +2336,7 @@ Create_E87_PortTransferStateReport(myCEID, myIndex)
 	
     Send_S6F11(myCEID, NewList(VID1500, VID1530));
 	
-	logn("Thinh <- Create_E87_PortTransferStateReport()" );
+	logn("Thinh <- Create_E87_PortTransferStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1289,7 +2354,7 @@ Create_E87_AccessModeStateReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID1500, VID1510, VID1511, VID1514;
 	
-	logn("Thinh -> Create_E87_AccessModeStateReport()" );
+	logn("Thinh -> Create_E87_AccessModeStateReport()");
 	
 	VID1500 = S2_U1(INTRO[myIndex].portid);	
 	VID1510 = S2_U1(1);
@@ -1316,7 +2381,7 @@ Create_E87_AccessModeStateReport(myCEID, myIndex)
 
     Send_S6F11(myCEID, NewList(VID1500, VID1510, VID1511, VID1514));
 	
-	logn("Thinh <- Create_E87_AccessModeStateReport()" );
+	logn("Thinh <- Create_E87_AccessModeStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1338,14 +2403,14 @@ Create_E87_AccessModeStateReport(myCEID, myIndex)
 /////////////////////////////////////////////////////////////////
 Create_E87_CarrierTransitionStateReport(myCEID, myIndex)
 {
-	local myReportID, myEvent, VID1500, VID1550, VID1598;
+	local i, myReportID, myEvent, VID1500, VID1550, VID1598;
 	
-	logn("Thinh -> Create_E87_CarrierTransitionStateReport()" );
+	logn("Thinh -> Create_E87_CarrierTransitionStateReport()");
 	
 	DEFAULTSLOTLIST = NewList();
 	for(i = 0; i < 25; i=i+1)
 	{
-		if ( i < INTRO[myIndex].quantity )
+		if (i < INTRO[myIndex].quantity)
 			DEFAULTSLOTLIST = InsertFirst(<U1 3>,DEFAULTSLOTLIST);
 		else
 			DEFAULTSLOTLIST = InsertFirst(<U1 1>,DEFAULTSLOTLIST);
@@ -1426,7 +2491,7 @@ Create_E87_CarrierTransitionStateReport(myCEID, myIndex)
 	
 	Send_S6F11(myCEID, NewList(VID1500, VID1550, VID1598));
 	
-	logn("Thinh <- Create_E87_CarrierTransitionStateReport()" );
+	logn("Thinh <- Create_E87_CarrierTransitionStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1447,13 +2512,13 @@ Create_E40_PJTransitionStateReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID1670, VID1671, VID1733, VID1734, VID1735, VID1880, VID1881;
 	
-	logn("Thinh -> Create_E40_PJTransitionStateReport()" );
+	logn("Thinh -> Create_E40_PJTransitionStateReport()");
 	
 	VID1670 = S2_A(INTRO[myIndex].pjid);
 	VID1671 = S2_U1(4);	
 	VID1733 = S2_BOOLEAN(True);	
 	VID1734 = S2_U1(1);	
-	VID1735 = S2_A(INTRO[myIndex].recipe);
+	VID1735 = S2_A(INTRO[myIndex].recipes);
 	VID1880 = S2_A(INTRO[myIndex].cjid);
 	VID1881 = S2_A(INTRO[myIndex].carrierid);
 		
@@ -1519,7 +2584,7 @@ Create_E40_PJTransitionStateReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID1670, VID1671, VID1733, VID1734, VID1735, VID1880, VID1881));
 	
-	logn("Thinh <- Create_E40_PJTransitionStateReport()" );
+	logn("Thinh <- Create_E40_PJTransitionStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1538,7 +2603,7 @@ Create_E94_CJTransitionStateReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID1673, VID1738, VID1747, VID1748;
 	
-	logn("Thinh -> Create_E94_CJTransitionStateReport()" );
+	logn("Thinh -> Create_E94_CJTransitionStateReport()");
 	
 	VID1673 = S2_A(INTRO[myIndex].cjid);
 	VID1738 = S2_U1(5);	
@@ -1592,7 +2657,7 @@ Create_E94_CJTransitionStateReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID1673, VID1738, VID1747, VID1748));
 	
-	logn("Thinh <- Create_E94_CJTransitionStateReport()" );
+	logn("Thinh <- Create_E94_CJTransitionStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1611,7 +2676,7 @@ Create_E90_SubstrateLocationObjectStateReport(myCEID, myIndex)
 {
 	local myReportID, myEvent, VID1683, VID1684, VID1685, VID1750;
 	
-	logn("Thinh -> Create_E90_SubstrateLocationObjectStateReport()" );
+	logn("Thinh -> Create_E90_SubstrateLocationObjectStateReport()");
 	
 	VID1683 = S2_U1(1);
 	VID1684 = S2_U1(1);
@@ -1632,7 +2697,7 @@ Create_E90_SubstrateLocationObjectStateReport(myCEID, myIndex)
 
 	Send_S6F11(myCEID, NewList(VID1683, VID1684, VID1685, VID1750));
 	
-	logn("Thinh <- Create_E90_SubstrateLocationObjectStateReport()" );
+	logn("Thinh <- Create_E90_SubstrateLocationObjectStateReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1656,16 +2721,16 @@ Create_E90_SubstrateTransitionReport(myCEID, myIndex, mySlotID)
 {
 	local myReportID, myEvent, mySubStrateID, mySubStrateLocID, VID1683, VID1684, VID1685, VID1687, VID1689;
 	
-	logn("Thinh -> Create_E90_SubstrateTransitionReport()" );
+	logn("Thinh -> Create_E90_SubstrateTransitionReport()");
 	
     if (mySlotID > 0 && mySlotID <26)
     {
-        if ( mySlotID < 10)
+        if (mySlotID < 10)
             mySubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(mySlotID));
         else
             mySubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(mySlotID));  
                 
-        logn("Thinh - mySubStrateID = ", mySubStrateID );           
+        logn("Thinh - mySubStrateID = ", mySubStrateID);           
     }
 	
 	mySubStrateLocID = CatString(INTRO[myIndex].carrierid,toASCII(mySlotID));
@@ -1746,7 +2811,7 @@ Create_E90_SubstrateTransitionReport(myCEID, myIndex, mySlotID)
 
 	Send_S6F11(myCEID, NewList(VID1683, VID1684, VID1685, VID1687, VID1689));
 	
-	logn("Thinh <- Create_E90_SubstrateTransitionReport()" );
+	logn("Thinh <- Create_E90_SubstrateTransitionReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1769,27 +2834,27 @@ Create_E90_ChamberAProcessStatusReport(myCEID, myIndex, myS1Slot, myS2Slot)
 	local myReportID, myEvent, mySequence, myRecipe, pos, myS1SubStrateID, myS2SubStrateID, VID2300240103, VID2300390104, VID2300390105;
 	local VID2350000101, VID2350000121, VID2314180104, VID2314180105, VID2300260103, myRecipeStep;
 	
-	logn("Thinh -> Create_E90_ChamberAProcessStatusReport()" );
+	logn("Thinh -> Create_E90_ChamberAProcessStatusReport()");
 	
-	if ( myS1Slot < 10 )
+	if (myS1Slot < 10)
 		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS1Slot));
 	else
 		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS1Slot));  
 			
-	logn("Thinh - myS1SubStrateID = ", myS1SubStrateID );           
+	logn("Thinh - myS1SubStrateID = ", myS1SubStrateID);           
 
-	if ( myS2Slot == "")
+	if (myS2Slot == "")
 		myS2SubStrateID == "";
-	else if ( myS2Slot < 10 )
+	else if (myS2Slot < 10)
 		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS2Slot));
 	else
 		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS2Slot));  
 			
-	logn("Thinh - myS2SubStrateID = ", myS2SubStrateID ); 
+	logn("Thinh - myS2SubStrateID = ", myS2SubStrateID); 
 	
-	mySequence 	= INTRO[myIndex].recipe;
+	mySequence 	= INTRO[myIndex].recipes;
 	pos			= FindString(mySequence, "-", 0);
-	myRecipe	= Substring( mySequence, pos.start + 1);
+	myRecipe	= Substring(mySequence, pos.start + 1);
 	myRecipeStep = 3;
 	
 	VID2300260103 = S2_I4(myRecipeStep);	//Recipe Step Number
@@ -1821,7 +2886,7 @@ Create_E90_ChamberAProcessStatusReport(myCEID, myIndex, myS1Slot, myS2Slot)
 
 	Send_S6F11(myCEID, NewList(VID2300260103, VID2300240103, VID2300390104, VID2300390105, VID2350000101, VID2350000121, VID2314180104, VID2314180105));
 	
-	logn("Thinh <- Create_E90_ChamberAProcessStatusReport()" );
+	logn("Thinh <- Create_E90_ChamberAProcessStatusReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1844,27 +2909,27 @@ Create_E90_ChamberBProcessStatusReport(myCEID, myIndex, myS1Slot, myS2Slot)
 	local myReportID, myEvent, mySequence, myRecipe, pos, myS1SubStrateID, myS2SubStrateID, VID2300240203, VID2300390204, VID2300390205;
 	local VID2350000201, VID2350000221, VID2314180204, VID2314180205, VID2300260203, myRecipeStep;
 	
-	logn("Thinh -> Create_E90_ChamberBProcessStatusReport()" );
+	logn("Thinh -> Create_E90_ChamberBProcessStatusReport()");
 
-	if ( myS1Slot < 10 )
+	if (myS1Slot < 10)
 		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS1Slot));
 	else
 		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS1Slot));  
 			
-	logn("Thinh - myS1SubStrateID = ", myS1SubStrateID );           
+	logn("Thinh - myS1SubStrateID = ", myS1SubStrateID);           
 
-	if ( myS2Slot == "")
+	if (myS2Slot == "")
 		myS2SubStrateID == "";
-	else if ( myS2Slot < 10 )
+	else if (myS2Slot < 10)
 		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS2Slot));
 	else
 		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS2Slot));  
 			
-	logn("Thinh - myS2SubStrateID = ", myS2SubStrateID ); 
+	logn("Thinh - myS2SubStrateID = ", myS2SubStrateID); 
 	
-	mySequence 	= INTRO[myIndex].recipe;
+	mySequence 	= INTRO[myIndex].recipes;
 	pos			= FindString(mySequence, "-", 0);
-	myRecipe	= Substring( mySequence, pos.start + 1);
+	myRecipe	= Substring(mySequence, pos.start + 1);
 	myRecipeStep = 5;
 	
 	VID2300260203 = S2_I4(myRecipeStep);	//Recipe Step Number
@@ -1896,7 +2961,7 @@ Create_E90_ChamberBProcessStatusReport(myCEID, myIndex, myS1Slot, myS2Slot)
 
 	Send_S6F11(myCEID, NewList(VID2300260203, VID2300240203, VID2300390204, VID2300390205, VID2350000201, VID2350000221, VID2314180204, VID2314180205));
 	
-	logn("Thinh <- Create_E90_ChamberBProcessStatusReport()" );
+	logn("Thinh <- Create_E90_ChamberBProcessStatusReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1919,27 +2984,27 @@ Create_E90_ChamberCProcessStatusReport(myCEID, myIndex, myS1Slot, myS2Slot)
 	local myReportID, myEvent, mySequence, myRecipe, pos, myS1SubStrateID, myS2SubStrateID, VID2300240303, VID2300390304, VID2300390305;
 	local VID2350000301, VID2350000321, VID2314180304, VID2314180305, VID2300260303, myRecipeStep;
 	
-	logn("Thinh -> Create_E90_ChamberCProcessStatusReport()" );
+	logn("Thinh -> Create_E90_ChamberCProcessStatusReport()");
 	
-	if ( myS1Slot < 10 )
+	if (myS1Slot < 10)
 		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS1Slot));
 	else
 		myS1SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS1Slot));  
 			
-	logn("Thinh - myS1SubStrateID = ", myS1SubStrateID );           
+	logn("Thinh - myS1SubStrateID = ", myS1SubStrateID);           
 
-	if ( myS2Slot == "")
+	if (myS2Slot == "")
 		myS2SubStrateID == "";
-	else if ( myS2Slot < 10 )
+	else if (myS2Slot < 10)
 		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".0",toASCII(myS2Slot));
 	else
 		myS2SubStrateID = CatString(INTRO[myIndex].carrierid,".",toASCII(myS2Slot));  
 			
-	logn("Thinh - myS2SubStrateID = ", myS2SubStrateID ); 
+	logn("Thinh - myS2SubStrateID = ", myS2SubStrateID); 
 	
-	mySequence 	= INTRO[myIndex].recipe;
+	mySequence 	= INTRO[myIndex].recipes;
 	pos			= FindString(mySequence, "-", 0);
-	myRecipe	= Substring( mySequence, pos.start + 1);
+	myRecipe	= Substring(mySequence, pos.start + 1);
 	myRecipeStep = 7;
 	
 	VID2300260303 = S2_I4(myRecipeStep);	//Recipe Step Number
@@ -1971,7 +3036,7 @@ Create_E90_ChamberCProcessStatusReport(myCEID, myIndex, myS1Slot, myS2Slot)
 
 	Send_S6F11(myCEID, NewList(VID2300260303, VID2300240303, VID2300390304, VID2300390305, VID2350000301, VID2350000321, VID2314180304, VID2314180305));
 	
-	logn("Thinh <- Create_E90_ChamberCProcessStatusReport()" );
+	logn("Thinh <- Create_E90_ChamberCProcessStatusReport()");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1981,7 +3046,7 @@ Create_E90_ChamberCProcessStatusReport(myCEID, myIndex, myS1Slot, myS2Slot)
 Send_S6F11(EventCEID, VIDList)
 {
 	local myRecID, myCEID, myRePortID, myVIDList, myEvent;
-	logn("Thinh -> Send_S6F11(", EventCEID, ")" );
+	logn("Thinh -> Send_S6F11(", EventCEID, ")");
 	
     RECORDID 			= RECORDID + 1;	
 	myRecID				= S2_U4(RECORDID);
@@ -1991,10 +3056,10 @@ Send_S6F11(EventCEID, VIDList)
 	myEvent 			= NewMessage(6, 11, 1);	
 	myEvent.text 		= S2_L(myRecID, myCEID, S2_L(S2_L(myReportID, myVIDList)));
 	
-	wait( NewTimer( 1 ) );	//sleep for 1 sec
-	SendPrimary( myEvent );
+	wait(NewTimer(1));	//sleep for 1 sec
+	SendPrimary(myEvent, TARGET);
 
-	logn("Thinh <- Send_S6F11(", EventCEID, ")" );	
+	logn("Thinh <- Send_S6F11(", EventCEID, ")");	
 }
 
 /////////////////////////////////////////////////////////////////
@@ -2003,14 +3068,14 @@ Send_S6F11(EventCEID, VIDList)
 /////////////////////////////////////////////////////////////////
 GetReportID(myCEID)
 {
-	local myReportID;
+	local i, ii, myReportID;
 	
     for(i = 0; i < GetCount(REPORTCEID); i = i+1)
     {
         eachlist 	= REPORTCEID[i];
         myReportID 	= eachlist[0];
         
-        //logn("Thinh - myReportID = ", myReportID );
+        //logn("Thinh - myReportID = ", myReportID);
         
         for(ii = 1; ii < GetCount(eachlist); ii = ii+1)
         {
@@ -2026,7 +3091,18 @@ GetReportID(myCEID)
             break;
     }
 	
-	//logn("Thinh - myReportID = ", myReportID );
+	//logn("Thinh - myReportID = ", myReportID);
 	
 	return (myReportID);
+}
+
+public GetCurrentProcessState()
+{
+	local mVids, mValues, S1F4_Reply;
+	logn("->GetCurrentProcessState()");
+	mVids = NewList(S2_U4(33882384));
+	S1F4_Reply = S1F3_Request(mVids); 
+	mValues = S1F4_Parser(S1F4_Reply, mVids);
+	PROCESSSTATE = mValues[0];
+	//LookUpDict(mVids, mValues);	
 }

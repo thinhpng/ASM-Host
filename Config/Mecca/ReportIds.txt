@@ -48,7 +48,7 @@
 126 LotInfoReport 200000109,200000110,200000111,200000112,200000113 SubstrateID,SubstLocId,SubstProcState,SubstState,LotID NA
 127 PortReservationStateReport 200000087,200000077,200220190 PortID,CarrierID,PortReservationState NA
 128 CounterInfoReport 200000300,200000301,200000302,200000303,200000304 CounterNumber,CounterLimit,CounterValue,CounterLink,CounterName NA
-129 PM1ModStateReport 101030002,101030193 PM1ModCommandState,PM1ModOperateState NA
+129 PM1ModStateReport 101030002,101030193,200000181 PM1ModCommandState,PM1ModOperateState,PM1RecipeStatus NA
 130 PM4ModStateReport 104030002,104030193 PM4ModCommandState,PM4ModOperateState NA
 131 PM6ModStateReport 106230002,106230009 PM6ModCommandState,PM6ModOperateState NA
 132 PM7ModStateReport 107230002,107230009 PM7ModCommandState,PM7ModOperateState NA

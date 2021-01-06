@@ -1,0 +1,135 @@
+//// EquipmentConstantRequest ////
+S2F13_Request(ECIDs){
+	local mRequest, mReply;
+	logn("*****    S2F13_EquipmentConstantRequest   *****");
+	mRequest = NewMessage();
+	mRequest.stream = 2;
+	mRequest.function = 13;
+	mRequest.wbit = 1;
+	mRequest.text = S2_L(Ecids);
+	mReply = wait(SendPrimary(mRequest));
+	wait(NewTimer(1));	//sleep for 1 sec
+	return (mReply);
+}
+//// NewEquipmentConstantSend ////
+S2F15_Request(ECIDs){
+	local mRequest, mReply;
+	logn("*****    S2F15_NewEquipmentConstantSend   *****");
+	mRequest = NewMessage();
+	mRequest.stream = 2;
+	mRequest.function = 15;
+	mRequest.wbit = 1;
+	mRequest.text = S2_L(ECIDs);
+	mReply = wait(SendPrimary(mRequest));
+	wait(NewTimer(1));	//sleep for 1 sec
+	return (mReply);
+}
+//// NewEquipmentConstantAck ////
+S2F16_Parser(S2F16_Reply){
+	local mCmdAck;
+	logn("*****    S2F16_NewEquipmentConstantAck   *****");
+	if(IsMessage(S2F16_Reply) && S2F16_Reply.text == "")
+		return;
+	//mReplyInfo	= Decode(S2F16_Reply.text);
+	mCmdAck = S2_Decode(S2F16_Reply.text);
+
+	switch(mCmdAck){
+		case 0: logn("*****    ", mCmdAck, ": Ok - Accepted ECIDs setting Request    *****"); break;
+		case 1: logn("*****    ", mCmdAck, ": One or more ECIDs does not exist    *****"); break;
+		case 2: logn("*****    ", mCmdAck, ": Tool is currently Busy    *****"); break;
+		case 3: logn("*****    ", mCmdAck, ": One or more values out of range    *****"); break;
+		default: logn("*****    ", mCmdAck, ": Unknown Issue!    *****"); break;
+	}
+}
+
+////////////////////////////////////////////////////////
+// Sending S2F15 to the tool with the ECIDs user provided
+////////////////////////////////////////////////////////
+public S2_F15_SetECIDs(ECIDsSetting){
+	local i, mEcId, mEcIds, mCount, mText, mStatus, mSecsEcIdList, mS1F6_Reply, mValues, mValue;
+	local mObjFound, mNameValuePair, mS2F14_Reply, mFormat;
+	logn(">>>>>> S2_F15_SetEquipmentConstants <<<<<<<");
+	if (IsEmptyList(ECIDsSetting)){
+		mText = "Click NO to Update or Click YES to Submit\n*** Terminate click CANCEL ***\nHave you entered all ECIDs?\n";
+		do{
+			mEcId = GuiGetString("Setting ECIDs. Enter one or many pairs ECIDs=Values with comma separator. Eg, 1234=12, 5678=12.12, 2345=1(1:true,0:false)");
+			mStatus = GuiMsgBox("Setting ECIDs Values", CatString(mText, mEcId), 3);
+		}while(mStatus == 7);
+
+		if(mStatus == 6){
+			mEcIds = MakeListFromString(mEcId);
+		}else{
+			logn("Terminated per user's request");
+			return;
+		}	
+		
+		for(i = 0;i < GetCount(mEcIds);i = i + 1){
+			mNameValuePair = NewList();
+			mEcIdAndValue = mEcIds[i];
+			mObjFound = FindString(mEcIdAndValue, "=", 0);
+
+			if(mObjFound.Count == 0){
+				mStatus = GuiMsgBox("Your Setting ECIDs Values Invalid", "Format should be Ecid1=Val1, Ecid2=Val2", 0);
+				return;
+			}
+			mEcId = AtoI(SubString(mEcIdAndValue, 0, mObjFound.Start));				
+			mValue = SubString(mEcIdAndValue, mObjFound.Start + 1);		
+			mSecsEcIdList = InsertFirst(S2_U4(mEcId), mSecsEcIdList);
+			mS2F14_Reply = S2F13_Request(mSecsEcIdList);
+			
+			if(IsMessage(mS2F14_Reply) && mS2F14_Reply.text == ""){
+				logn("INVALID mS2F14_Reply: ", mS2F14_Reply.text);
+				return;
+			}				
+			
+			mReplyInfo = Decode(mS2F14_Reply.text);
+			mFormat = GetFormat(mReplyInfo[0]);			
+			
+			if(mFormat == "F4" || mFormat == "F8"){
+				mValue = AToR(mValue);
+			}else if(mFormat == "BOOLEAN"){
+				mValue = AtoI(mValue);
+			}
+	
+			mSecsEcIdList = NewList();
+			mNameValuePair = InsertFirst(CatString("S2_", mFormat) (mValue), mNameValuePair);		
+			mNameValuePair = InsertFirst(S2_U4(mEcId), mNameValuePair);
+			mSecsEcIdList = InsertFirst(S2_L(mNameValuePair), mSecsEcIdList);
+		}
+	}else{
+		mSecsEcIdList = ECIDsSetting;
+	}
+		
+	mS2F16_Reply = S2F15_Request(mSecsEcIdList);
+	S2F16_Parser(mS2F16_Reply);
+}
+
+////////////////////////////////////////////////////////
+// Converting comma separated string to a list 
+///////////////////////////////////////////////////////
+MakeListFromString(item){
+	local i, mResult, subList, commaEnd, commaBegin, subItem;
+	logn("->MakeListFromString()");
+
+	if(FindString(item, " ").Count != 0){
+		item = RemoveWhiteSpace(item);
+	}
+
+	commaBegin = 0;
+	do{	//If field contains more than one item then they're separated by comma
+		//logn("commaBegin: ", commaBegin);
+		commaEnd = FindString(item, ",", commaBegin);
+
+		if(commaEnd.Count != 0)
+			subItem = SubString(item, commaBegin, commaEnd.Start - commaBegin); //Get each item in the field
+		else
+			subItem = SubString(item, commaBegin); //The last item in the field
+
+		//logn("subItem: ", subItem);
+		subList = InsertFirst(subItem, subList); //List all items together					
+		commaBegin = commaEnd.Start + 1;
+	}while(commaEnd.Count != 0); //Do until we don't see the next comma in the field
+
+	//logn("Size: ", GetCount(subList));
+	return (Reverse(subList));
+}

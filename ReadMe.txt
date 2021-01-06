@@ -1,0 +1,19 @@
+
+MCIF data type codes
+
+L – list
+20(x) FBYTE
+24(x) FTRUTH
+40(x) FASCII
+44(x) FJIS8
+48(x) FCHAR2
+64(x) FSINT1
+68(x) FSINT2
+70(x) FSINT4
+60(x) FSINT8
+90(x) FFLOAT4
+80(x) FFLOAT8
+A4(x) FUINT1
+A8(x) FUINT2
+B0(x) FUINT4
+A0(x) FUINT8

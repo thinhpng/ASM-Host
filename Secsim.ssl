@@ -1,3 +1,4 @@
+Global PORT;
 /*--------------------------------------------------------------------------
 ' File: secsim.ssl      Version: 1.1                          Date: 05-14-96
 '
@@ -154,7 +155,7 @@ Secsim ()
 	local myreply;
 	local name;
 	local msg;
-	local port;
+	//local port;
 	local PWCount;
 	local RecCount;
 
@@ -166,19 +167,18 @@ Secsim ()
 	// the other call.  This call will ask the user which port will
 	// be used for this instance of IdleRun
 
-	port = 0;
-	//port =GuiGetInteger("Secsim: Use which SECSIM Pro Port ID ?");
-
 	// Enable Port with no parameters will use the port selected
 	// as the default in the Options:Project Settings SECS-I or
 	// HSMS-SS tabbed box, (depending on the protocol in use)
 	// logn converts the integer return to a string automatically!
-	logn("Enable Port Status = ", EnablePort(port));
+	
+	PORT = GuiGetInteger("Hit Enter for Default (Local: 127.0.0.1)\n1 -> UPC1, 2 -> UPC2, 3 -> Y3, 4 -> Y4, 5 -> Y5, 6 -> Y6 11 -> X1, 12 -> X2, 13 -> X3, 14 -> X4");
+	TARGET = NewTarget(DEVICEID, PORT); //SSPro+ with multi projects must have specific TARGET. Otherwise, SendPrimary will have trouble.  	
+	logn("Enable Port# ", EnablePort(TARGET));	
 	logn("Script initialization completed. ");
-
+	//logn("PORT = ", PORT);
+	Subscribe(PORT);
 	// Set up to receive messages
-	Subscribe(port);
-
 	while (1)
 	{
 //		logn( "Thinh - Secsim's whileloop" );
@@ -189,16 +189,15 @@ Secsim ()
 		// if it a primary message?
 		if (msg.function & 0x01)
 		{
-//			logn( "Thinh - Secsim now handles S", msg.stream, "F", msg.function);
-			logn( "Thinh - Secsim - verifying received message" );
-			// print the status of the incoming message
-			if( msg.status != S_RECV )
-				log( EP_Translate(msg.stream, msg.function), "\n Received, Primary Status is:  (", Translate(msg.status), ")" );
-			else
-				log( "Received ", EP_Translate(msg.stream, msg.function), ".");
+			// logn( "Thinh - Secsim now handles S", msg.stream, "F", msg.function);
+			// logn( "Thinh - Secsim - verifying received message" );
+			// // print the status of the incoming message
+			// if( msg.status != S_RECV )
+				// log( EP_Translate(msg.stream, msg.function), "\n Received, Primary Status is:  (", Translate(msg.status), ")" );
+			// else
+				// log( "Received ", EP_Translate(msg.stream, msg.function), ".");
 
-			logn( " (S", msg.stream, "F", msg.function, ": length = ",
-				GetCount(tostring(msg.text)), ")"  );
+			// logn( " (S", msg.stream, "F", msg.function, ": length = ", GetCount(tostring(msg.text)), ")"  );
 
 			// build the SxFx name and look it up in SECSIM Pro's memory
 			name = catstring( "S", toASCII( msg.stream ), "F", toASCII( msg.function + 1 ) );
@@ -211,26 +210,17 @@ Secsim ()
 
 			if (IsEmptyList( myreply ) || (msg.wbit == 0))
 			{
-				//logn( "Thinh - Secsim - Not found" );
+				//logn( "Thinh - Secsim - Not Handled Wait Bit Zero Message!" ); 
 
-				// Stream 9 messages are not responded to!
-				if ( msg.stream == 9 )
-				{
-					logn( "Thinh - Secsim - S9" );
+				// add this to the list of messages that have come in
+				ManualList = InsertFirst( msg, ManualList );
 
-					UnReceive();
-				}
-				else
-				{
-					//logn( "Thinh - Secsim - No reply" );
-
-					// add this to the list of messages that have come in
-					ManualList = InsertFirst( msg, ManualList );
-
-					// run a task that will dispose of a message after 30
-					// seconds if no one has responded to it
+				// run a task that will dispose of a message after 30
+				// seconds if no one has responded to it
+				if(S6F11WBIT == 1)
 					run( DropForgottenMessage, newlist( msg, 30 ) );
-				}
+				
+				UnReceive();
 			}
 			// IsMessage checks for objects that have been defined in the
 			// script language that represent a valid SECS message.
@@ -942,6 +932,23 @@ S2_Decode(Data)
 	return(temp);
 }
 
+Str_Decode(Data)
+{
+	Local i, myValue, myValueList;
+	// logn ("Data: ", Data);	
+	// temp_format = GetFormat(Data);
+	// logn ("temp_format: ", temp_format);
+	
+	// logn ("Decode temp: ", temp);	
+	for(i = 0; i < GetCount(Data); i = i + 1)
+	{
+		myValue = ToAscii(Decode(Data[i]));
+		logn("myValue = ", myValue);		
+		myValueList = InsertFirst(myValue, myValueList);
+		return (Reverse(myValueList));
+	}
+}
+
 D_Decode(Data)
 {
 	Local i, myValue, myValueList;
@@ -1502,35 +1509,62 @@ Smart_Decode()
 			{
 				format = GetFormat(value[ (ArgList[ii]-1) ]);
 
-				If ( format == "B")
-				{
+				If ( format == "B"){
 					isB = TRUE;
-				}
-				Else
-				{
+				}Else{
 					isB = FALSE;
 				}
+				
+				//logn(isB);
 			}
 			value = Decode(value[ (ArgList[ii]-1) ]);
 			//logn("Updating value: ", value);
 		}
 		Else
 		{
+			//logn("break");
 			break;
 		}
 	}
-
+	
 	// Before we return make sure we format the data correctly
 	If(!IsEmptyList(value))
 	{
+		//logn("test"); //t
 		// If it is a single data item, then pull data out
 		// of the SSL list, otherwise return an SSL list of data
 		if ((GetCount(value) == 1) && (format != "L"))
 		{
 			value = GetFirst(value);
-			If(isB) value = +value;
+			If(isB) 
+				value = +value;
+			
+			//logn("valuetest: <", value, ">"); //t valuetest: <>
+			
+			if(IsString(value) && GetCount(value) == 1 && AToI(value) == 0){
+				//logn("value: ", value);
+				value = ArgList[0];
+				format = GetFormat(value);
+				if(value && GetFormat(value) == "B"){
+					value = ToString(value);
+					value = ToString(ToHex(value[2]));
+					if(value[0] == "0")
+						value = value[1];
+				}
+			}
+			//else
+				//logn("test1"); //t
 		}
 	}
+	//else
+		//logn("here");
+	
+	// if(IsReal(value)){
+		// value = ToString(value);
+		// logn("Converted to String");
+	// }
+	//logn("valueF: <", value, ">"); //t valueF: <>
+	
 	return(value);
 }
 
