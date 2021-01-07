@@ -1260,7 +1260,8 @@ AreChambersReady(){
 	if(mSystem){
 		logn("*****************************************************");
 		logn("****** TOOL IS READY FOR LOT INTRODUCTION NOW *******");
-		logn("*****************************************************");		
+		logn("*****************************************************");	
+		CTRLREMOTE = 1;		
 		TOOL_READY = 1;
 		_SynchronizeTimeWithHost();
 	
@@ -1359,6 +1360,7 @@ VerifyControlState(ControlState){
 				wait();
 				break;
 		case 5: mStatus = "******************  ONLINE/REMOTE"; 
+				CTRLREMOTE = 1;
 				ONLINE = 1;
 				if (!LP1_CID && !LP2_CID && !LP3_CID && !LP4_CID){
 					_CarrierLocationInfo();			

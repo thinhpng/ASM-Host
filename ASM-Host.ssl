@@ -5363,6 +5363,11 @@ public S1_F3_IsToolOnlineRemote(){
 	mVids = InsertFirst(S2_U4(33554448), mVids);
 	mS1F4_Reply = S1F3_Request(mVids);
 	mValues = S1F4_Parser(mS1F4_Reply, mVids);
+	if(mValues[0] == 5 && mValues[1] == 1){
+		return(1);
+	}else{
+		return(0);
+	}	
 	//LookUpDict(mVids, mValues);
 }
 
@@ -8924,6 +8929,11 @@ IsLPLocked(PortId){
 // PJQTY = 0 will prompt for decision on number of PJ   
 RunLotAtLP(PortID, PjCmd, PJQTY, SlotsAndRecipes, TuningInfo){
 	local mS1F4_Reply, mStatus, mSlotAndRecipe, mPortCID;
+	
+	if(CTRLREMOTE == 0){
+		CTRLREMOTE = S1_F3_IsToolOnlineRemote(); //Verify again to make final decision
+	}
+	
 	if(CTRLREMOTE == 0){
 		logn("*****************************************************");
 		logn("********* Please set Control ONLINE REMOTE **********");
